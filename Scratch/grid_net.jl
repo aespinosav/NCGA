@@ -15,7 +15,6 @@ using TrafficNetworks2,
 ###
 ### Gurobi licence only once
 ###      
-
       
 if !(@isdefined env)
     const env = Gurobi.Env()
@@ -26,7 +25,6 @@ end
 ### Incidence matrix correction (and other functions)
 ###
 
-
 include("tools.jl")
 include("penalty.jl")
 
@@ -34,7 +32,6 @@ include("penalty.jl")
 ###
 ### γ range and demand
 ###
-
 
 γ_array = [0.1, 0.5, 0.9]
 #d = 1.0
@@ -44,7 +41,6 @@ d = 1.5
 ###
 ### Define graph and network and MST
 ###
-
 
 # Load simple graph
 g = loadgraph("g_test.mg", MGFormat())
@@ -69,7 +65,6 @@ m = ne(rn.g)
 ### Demand structure
 ###
 
-
 ods = [(1,9)]
 n_ods = length(ods)
 demands = [d]
@@ -79,14 +74,13 @@ demands = [d]
 ### Restricting edges for HVs
 ###
 
-
 # Find minimum spanning tree
 
 mst = kruskal_mst(g)
 mst_rev = reverse.(mst)
 
-mst_edges = [(e.src, e.dst) for e in mst]
-mst_rev_edges = [(e.src, e.dst) for e in mst_rev]
+#mst_edges = [(e.src, e.dst) for e in mst]
+#mst_rev_edges = [(e.src, e.dst) for e in mst_rev]
 
 # Identify MST edges
 mst_indices = findfirst.(isequal.(mst), [sorted_edges])
@@ -96,7 +90,6 @@ mst_rev_indices = findfirst.(isequal.(mst_rev), [sorted_edges])
 ###
 ### Protected indices and edges (MST)
 ###
-
 
 # MST
 pi_1 = vcat(mst_indices, mst_rev_indices)

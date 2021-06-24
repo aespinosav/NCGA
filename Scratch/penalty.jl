@@ -1,11 +1,3 @@
-#function my_incidence_matrix(G)
-#    I = vcat([src(e) for e in edges(G)], [dst(e) for e in edges(G)])
-#    J = vcat(collect(1:ne(G)), collect(1:ne(G)))
-#    V = vcat(fill(-1, ne(G)), fill(1, ne(G)))
-#    return sparse(I, J, V)
-#end
-
-
 """
 Solves mixed assignment where a set of links (given by bounded indices) are
 prohibited for the UE vehicles
@@ -17,7 +9,10 @@ prohibited for the UE vehicles
                                     bounded_indices,
                                     r_array)` 
 """
-function me_excluded_assignment_penalty(rn, ods, demands, γ, bounded_indices, r_array) 
+function me_excluded_assignment_penalty(rn, ods, demands, γ, bounded_indices, r_array; solver=:gurobi) 
+    
+    n = nv(rn.g)
+    m = ne(rn.g)
     
     # Cost structure (standard)
     #A = my_incidence_matrix(rn.g)
@@ -56,13 +51,16 @@ function me_excluded_assignment_penalty(rn, ods, demands, γ, bounded_indices, r
     p_obj(x, y, p_param, b_indices) = me_obj_func(x,y) + 
                                       pen_term(x, p_param, b_indices)
 
-
     ### JuMP model construction
     
     #p_stap = Model(Ipopt.Optimizer)
     #p_stap = Model(Gurobi.Optimizer)
-    p_stap = Model(() -> Gurobi.Optimizer(env))
-
+    if solver == :gurobi
+        p_stap = Model(() -> Gurobi.Optimizer(env))
+    elseif solver == :ipopt
+        p_stap = Model(Ipopt.Optimizer)
+    end
+    
     # OD specific link flows HV         
     @variable(p_stap, x[1:m,1:n_ods])
     @constraint(p_stap, non_neg_x, x .>= 0)
@@ -134,7 +132,7 @@ end
 Run penalty method for network with restricted flow on some
 links for a range of penetration rates
 """
-function me_excluded_assignment_penalty_pr(rn, ods, demands, γ_array, bounded_indices, r_array)
+function me_excluded_assignment_penalty_pr(rn, ods, demands, γ_array, bounded_indices, r_array; solver=:gurobi)
     
     xx = []
     yy = []
@@ -145,7 +143,8 @@ function me_excluded_assignment_penalty_pr(rn, ods, demands, γ_array, bounded_i
                                               demands,
                                               γ,
                                               bounded_indices,
-                                              r_array)
+                                              r_array,
+                                              solver=solver)
         push!(xx, x)
         push!(yy, y)
         push!(agg_a, x+y)
