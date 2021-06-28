@@ -1,4 +1,65 @@
 ###
+###
+###
+
+import TrafficNetworks2.multi_pair_stap_nc
+
+"""
+Generate and solve multi pair stap by making copies of
+the network (general expression of stap)
+"""
+function multi_pair_stap_nc(rn, ods, demands; regime=:ue, solver=:gurobi)
+    C = (regime == :ue ? 0.5 : 1.0)
+   
+    n = nv(rn.g)
+    m = ne(rn.g)
+    # Number of OD pairs
+    n_ods = length(ods)
+
+    a = rn.edge_params[:a]
+    B = diagm(rn.edge_params[:b])  
+    
+    d_vects = SparseVector{Float64,Int64}[]
+    for i in 1:length(ods)
+        s, d = ods[i]
+        d_vec = spzeros(n)
+        d_vec[s] = -demands[i]
+        d_vec[d] = demands[i]
+        push!(d_vects, d_vec)
+    end
+    
+    A = incidence_matrix(rn.g)
+    
+    if solver == :gurobi
+        stap = Model(() -> Gurobi.Optimizer(env))
+    elseif solver == :ipopt
+        stap = Model(Ipopt.Optimizer)
+    end
+    
+    #stap = Model(Gurobi.Optimizer)
+    #set_silent(stap)
+    
+    # OD specific link flows
+    @variable(stap, x[1:m,1:n_ods] >= 0)
+    # Aggregate link flows (for expressing objective)
+    @variable(stap, link_flow[1:m] >= 0)
+    
+    @constraint(stap, [i in 1:n_ods], A*x[:,i] .== d_vects[i])
+    # Link flows have to add up
+    @constraint(stap,
+                inter_var_con[i in 1:m], # name of constraint
+                link_flow[i] == sum(x[i,j] for j in 1:n_ods))
+                         
+    # Objective function
+    #For some reason this stopped working...
+    #@objective(stap, Min, dot(a,link_flow) + (C*link_flow'*B*link_flow))
+    @objective(stap, Min, sum(a.*link_flow) + C*link_flow'*B*link_flow )
+    optimize!(stap)
+    value.(x)
+end
+
+
+###
 ### Cost functions
 ###
 
@@ -84,11 +145,11 @@ function node_closest_to(mg, point)
 end
 
 """
-Find MST of `g` and return array of edges and indices
+Find MST of `mg` and return array of edges and indices
 
 Finds MST and also gets reversed edges of it.
 """
-function find_mst(g, sorted_edges)
+function find_mst(mg, sorted_edges)
 
     #sorted_edges = collect(edges(mg))
     
@@ -154,21 +215,6 @@ function find_mh_paths(mg,
     return indep_paths_nodes, indep_paths_edges, indep_paths_inds
 end
 
-#import LightGraphs.incidence_matrix
-#function incidence_matrix(G)
-#    I = vcat([src(e) for e in edges(G)], [dst(e) for e in edges(G)])
-#    J = vcat(collect(1:ne(G)), collect(1:ne(G)))
-#    V = vcat(fill(-1, ne(G)), fill(1, ne(G)))
-#    return sparse(I, J, V)
-#end
-
-###
-### Verification
-###
-
-#function forbidden_flows(x, forbidden_links)
-#    x[forbidden_links]
-#end
 
 ###
 ### Plotting for comparison
