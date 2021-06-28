@@ -58,6 +58,31 @@ function multi_pair_stap_nc(rn, ods, demands; regime=:ue, solver=:gurobi)
     value.(x)
 end
 
+###
+### Update mean / variance (Welford)
+###
+
+function update_sums_welford(r_N, r_mean, r_M2, new_x)
+    delta = new_x - r_mean
+    r_mean += delta / r_N
+    delta_2 = new_x - r_mean
+    r_M2 += delta .* delta_2
+    
+    return r_mean, r_M2
+end
+
+# This function seems almost pointless...
+"""
+Running sample variance
+"""
+function calc_var_welford(N, M2)
+    if N < 2
+        return NaN
+    else
+        return M2/(N-1)
+    end
+end
+
 
 ###
 ### Cost functions

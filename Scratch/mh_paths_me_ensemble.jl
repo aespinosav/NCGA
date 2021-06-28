@@ -145,17 +145,25 @@ function main()
 
     N = length(net_files)
 
+    ###
+    ###
+    ###
+    
     #=
       The following containers are 2D arrays,
       columns: γ
-      rows: pen steps
+      rows: penalty steps
     =#
+ 
+    # Running mean and std containers (Welford alorithm)
+    r_mean_tot = zeros(penalty_steps + 1, length(γ_array))
+    r_std_tot = zeros(penalty_steps + 1, length(γ_array))
 
-    suma_tot = zeros(penalty_steps + 1, length(γ_array))
-    suma_cuad_tot = zeros(penalty_steps + 1, length(γ_array))
+    r_mean_perv_hv = zeros(penalty_steps + 1, length(γ_array))
+    r_std_perv_hv = zeros(penalty_steps + 1, length(γ_array))
 
-    suma_perv_hv = zeros(penalty_steps + 1, length(γ_array))
-    suma_perv_av = zeros(penalty_steps + 1, length(γ_array))
+    r_mean_perv_av = zeros(penalty_steps + 1, length(γ_array))
+    r_std_perv_av = zeros(penalty_steps + 1, length(γ_array))
 
     for (i,file) in enumerate(net_files)
 
@@ -170,8 +178,8 @@ function main()
 
         sorted_edges = collect(edges(rn.g))
 
-        O = node_closest_to(net, [0,0])
-        D = node_closest_to(net, [1,1])
+        O = node_closest_to(net, [0,0]) # lower left-most node
+        D = node_closest_to(net, [1,1]) # upper right-most node
 
         ############################################
 
@@ -245,50 +253,37 @@ function main()
         
         Each results[i] array has as many elements as 
         there are γ_values ( i.e. length(γ_array) ).
-        
-        To make things easier to work with we transform to 
-        an array of 2D arrays:
         =#
 
-        flows_hv = [hcat(results[1][j]...) for j in 1:length(γ_array)]
-        flows_av = [hcat(results[2][j]...) for j in 1:length(γ_array)]
-        flows_agg = [hcat(results[3][j]...) for j in 1:length(γ_array)]
+        
+        for (j,γ) in enumerate(γ_array)
+            
+            # for each γⱼ (jth value of γ_array)
+            flows_hv = hcat(results[1][j]...)
+            flows_av = hcat(results[2][j]...)
+            flows_agg = hcat(results[3][j]...)
+            
+            ####################################
+            
+            edge_costs = travel_times.(flows_agg[j], a, b)
+            
+            tot_costs = mapslices(x -> total_cost(x, a, b), flows_agg, dims=1)[:]
+            perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / d*(1-γ))[:]
+            perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / d*γ)[:]
 
-        # Reshaping might affect performance (maybe put all this in sum for updating?)
-        edge_costs = [travel_times.(flows_agg[j], a, b) 
-                      for j in 1:length(γ_array)]
-
-        tot_costs = [mapslices(x -> total_cost(x, a, b), flows_agg[j], dims=1)
-                     for j in 1:length(γ_array)]
-        tot_costs = map(x->reshape(x, length(x), ), tot_costs)
-
-        perv_costs_hv = [sum((flows_hv[j] .* edge_costs[j]), dims=1) / d*(1-γ_array[j])
-                         for j in 1:length(γ_array)]
-        perv_costs_hv = map(x->reshape(x, length(x), ), perv_costs_hv)
-
-
-        perv_costs_av = [sum((flows_av[j] .* edge_costs[j]), dims=1) / d*γ_array[j]
-                         for j in 1:length(γ_array)]
-        perv_costs_av = map(x->reshape(x, length(x), ), perv_costs_av)
-
-        # Update running sums
-        for j in 1:length(γ_array)
-            suma_tot[:,j] += tot_costs[j]
-            suma_cuad_tot[:,j] += tot_costs[j].^2
-
-            suma_perv_hv[:,j] += perv_costs_hv[j]
-            suma_perv_av[:,j] += perv_costs_av[j]
-
+            # Welford algorithm for running std (mean included)
+            r_mean_tot[:,j], r_std_tot[:,j] = update_sums_welford(i, r_mean_tot[:,j], r_std_tot[:,j], tot_costs)
+            r_mean_perv_hv[:,j], r_std_perv_hv[:,j] = update_sums_welford(i, r_mean_perv_hv[:,j], r_std_perv_hv[:,j], perv_costs_hv)
+            r_mean_perv_av[:,j], r_std_perv_av[:,j] = update_sums_welford(i, r_mean_perv_av[:,j], r_std_perv_av[:,j], perv_costs_av)
+            
             # for normalised values
         end
     end
 
-    # Calculate means
-    mean_tot_costs = suma_tot ./ N
-    std_tot_costs = sqrt.((1/(N-1)) * (suma_cuad_tot .- N*mean_tot_costs.^2))
-
-    mean_perv_costs_hv = suma_perv_hv ./ N
-    mean_perv_costs_av = suma_perv_av ./ N
+    # Welford
+    std_tot_costs = sqrt.(calc_var_welford(N, r_std_tot))
+    std_perv_costs_hv = sqrt.(calc_var_welford(N, r_std_perv_hv))
+    std_perv_costs_av = sqrt.(calc_var_welford(N, r_std_perv_av))
 
     # Normalised costs (relative to UE and SO)
 
@@ -299,11 +294,14 @@ function main()
     ###
 
     # Raw values
-    writedlm("mean_total_costs.dat", mean_tot_costs)
+    writedlm("mean_total_costs.dat", r_mean_tot)
     writedlm("std_total_costs.dat", std_tot_costs)
 
-    writedlm("mean_perv_costs_hv.dat", mean_perv_costs_hv)
-    writedlm("mean_perv_costs_av.dat", mean_perv_costs_av)
+    writedlm("mean_perv_costs_hv.dat", r_mean_perv_hv)
+    writedlm("std_perv_costs_hv.dat", std_perv_costs_hv)
+    
+    writedlm("mean_perv_costs_av.dat", r_mean_perv_av)
+    writedlm("std_perv_costs_av.dat", std_perv_costs_av)
 
     # Normalised
 
