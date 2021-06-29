@@ -159,11 +159,17 @@ function main()
     r_mean_tot = zeros(penalty_steps + 1, length(γ_array))
     r_std_tot = zeros(penalty_steps + 1, length(γ_array))
 
+    r_mean_normed_tot_costs = zeros(penalty_steps + 1, length(γ_array))
+    r_std_normed_tot_costs = zeros(penalty_steps + 1, length(γ_array))
+
     r_mean_perv_hv = zeros(penalty_steps + 1, length(γ_array))
     r_std_perv_hv = zeros(penalty_steps + 1, length(γ_array))
 
     r_mean_perv_av = zeros(penalty_steps + 1, length(γ_array))
     r_std_perv_av = zeros(penalty_steps + 1, length(γ_array))
+
+    r_mean_cost_diff = zeros(penalty_steps + 1, length(γ_array))
+    r_std_cost_diff = zeros(penalty_steps + 1, length(γ_array))
 
     for (i,file) in enumerate(net_files)
 
@@ -246,38 +252,52 @@ function main()
                                                     av_excl_edges_inds,
                                                     r_array,
                                                     solver=optimiser)
+
         #=
         results[1] has HV flows
         results[2] has AV flows
         results[3] has aggregate flows
-        
+
         Each results[i] array has as many elements as 
         there are γ_values ( i.e. length(γ_array) ).
         =#
 
-        
         for (j,γ) in enumerate(γ_array)
-            
+
             # for each γⱼ (jth value of γ_array)
             flows_hv = hcat(results[1][j]...)
             flows_av = hcat(results[2][j]...)
             flows_agg = hcat(results[3][j]...)
-            
+
             ####################################
-            
+
             edge_costs = travel_times.(flows_agg[j], a, b)
-            
+
+            # Total costs (and normalisation)
             tot_costs = mapslices(x -> total_cost(x, a, b), flows_agg, dims=1)[:]
+            normed_tot_costs = (tot_costs .- so_cost) ./ (ue_cost - so_cost)
+
+            # Per-veh costs (and difference)
             perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / d*(1-γ))[:]
             perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / d*γ)[:]
 
+            perv_cost_diff = perv_costs_hv - perv_costs_av
+
             # Welford algorithm for running std (mean included)
             r_mean_tot[:,j], r_std_tot[:,j] = update_sums_welford(i, r_mean_tot[:,j], r_std_tot[:,j], tot_costs)
+            r_mean_normed_tot_costs[:,j], r_std_normed_tot_costs[:,j] = update_sums_welford(i,
+                                                                                            r_mean_normed_tot_costs[:,j],
+                                                                                            r_std_normed_tot_costs[:,j],
+                                                                                            normed_tot_costs)
+
             r_mean_perv_hv[:,j], r_std_perv_hv[:,j] = update_sums_welford(i, r_mean_perv_hv[:,j], r_std_perv_hv[:,j], perv_costs_hv)
             r_mean_perv_av[:,j], r_std_perv_av[:,j] = update_sums_welford(i, r_mean_perv_av[:,j], r_std_perv_av[:,j], perv_costs_av)
-            
-            # for normalised values
+
+            r_mean_cost_diff[:,j], r_std_cost_diff[:,j] = update_sums_welford(i, r_mean_cost_diff[:,j], r_std_cost_diff[:,j], perv_cost_diff)
+
         end
+
+
     end
 
     # Welford
@@ -286,8 +306,10 @@ function main()
     std_perv_costs_av = sqrt.(calc_var_welford(N, r_std_perv_av))
 
     # Normalised costs (relative to UE and SO)
+    std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
 
     # Difference of per-veh costs
+    std_perv_cost_diff = sqrt.(calc_var_welford(N, r_std_cost_diff))
 
     ###
     ### Write data files
@@ -299,11 +321,17 @@ function main()
 
     writedlm("mean_perv_costs_hv.dat", r_mean_perv_hv)
     writedlm("std_perv_costs_hv.dat", std_perv_costs_hv)
-    
+
     writedlm("mean_perv_costs_av.dat", r_mean_perv_av)
     writedlm("std_perv_costs_av.dat", std_perv_costs_av)
 
     # Normalised
+    writedlm("normed_mean_total_costs.dat", r_mean_normed_tot_costs)
+    writedlm("std_normed_total_costs.dat", std_normed_tot_costs)
+
+    # Per-vehicle cost difference
+    writedlm("perv_mean_costs_diff.dat", r_mean_cost_diff)
+    writedlm("perv_std_cost_diff.dat", std_perv_cost_diff)
 
     # Write parameter file
     save("batch_run_params.jld2", parsed_args)
