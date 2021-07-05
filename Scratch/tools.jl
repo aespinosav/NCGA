@@ -1,4 +1,69 @@
 ###
+### Parse args (CL interface)
+###
+
+using ArgParse,
+      JuMP
+
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table! s begin
+         "--optim"
+            help = "Which optimiser: `gurobi` or `ipopt`?"
+            arg_type = Symbol
+            default = :gurobi
+        "--penalty_steps"
+            help = "Steps in the 'penalty method'"
+            arg_type = Int
+            default = 7
+        "--gamma_init"
+            help = "Penetration rate start value"
+            arg_type = Float64
+            default= 0.1
+        "--gamma_step"
+            help = "Penetration rate start value"
+            arg_type = Float64
+            default= 0.4
+        "--gamma_stop"
+            help = "Penetration rate start value"
+            arg_type = Float64
+            default= 0.9
+        "--dir"
+            help = "Directory of files with networks in an ensemble"
+            arg_type = String
+            default = "."
+        "--num_nets"
+            help = "Number of networks to use"
+            arg_type = Int
+            default = -1
+        "--mh_steps"
+            help = "Transitions to attempt in MH algorithm"
+            arg_type = Int
+            default = 10000
+        "--path_sample_stagger"
+            help = "Spacing between 'independent' samples of MH paths"
+            arg_type = Int
+            default = 10
+        "d"
+            help = "Demand"
+            required = true
+            arg_type = Float64
+        "μ"
+            help = "Temperature parameter for MH path sampling"
+            required = true
+            arg_type = Float64
+        "p_splice"
+            help = "Splicing prob for MH step transition: 0 < p_splice < 1"
+            required = true
+            arg_type = Float64
+    end
+
+    return parse_args(s)
+end
+
+
+###
 ### Import `multi_pair_stap_nc` and redefine to give solver options 
 ###
 
