@@ -148,13 +148,13 @@ function main()
     ###
     ###
     ###
-    
+
     #=
       The following containers are 2D arrays,
       columns: γ
       rows: penalty steps
     =#
- 
+
     # Running mean and std containers (Welford alorithm)
     r_mean_tot = zeros(penalty_steps + 1, length(γ_array))
     r_std_tot = zeros(penalty_steps + 1, length(γ_array))
@@ -170,6 +170,9 @@ function main()
 
     r_mean_cost_diff = zeros(penalty_steps + 1, length(γ_array))
     r_std_cost_diff = zeros(penalty_steps + 1, length(γ_array))
+
+    r_mean_percentage_links_hv = 0
+    r_std_percentage_links_hv = 0
 
     for (i,file) in enumerate(net_files)
 
@@ -224,6 +227,12 @@ function main()
             end
         end
 
+        # Update mean of % of network dedicated to HVs
+        hv_percent_edges = length(hv_permitted_edges) / ne(rn.g)
+        r_mean_percentage_links_hv,  r_std_percentage_links_hv = update_sums_welford(i, r_mean_percentage_links_hv , r_std_percentage_links_hv, hv_percent_edges)
+
+
+
         ############################################
 
         ###
@@ -244,7 +253,7 @@ function main()
         ###
         ### Mixed EQ on restricted network
         ###
-        
+
         results = me_excluded_assignment_penalty_pr(rn,
                                                     [(O,D)],
                                                     [d],
@@ -300,10 +309,13 @@ function main()
 
     end
 
-    # Welford
+    ### Welford
     std_tot_costs = sqrt.(calc_var_welford(N, r_std_tot))
     std_perv_costs_hv = sqrt.(calc_var_welford(N, r_std_perv_hv))
     std_perv_costs_av = sqrt.(calc_var_welford(N, r_std_perv_av))
+
+    # % of usable links for HVs
+    std_hv_link_percent = sqrt.(calc_var_welford(r_std_percentage_links_hv))
 
     # Normalised costs (relative to UE and SO)
     std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
