@@ -38,6 +38,9 @@ end
 mg = loadgraph("g_test_medium.mg", MGFormat())
 rn = skel2rn(mg)
 
+a = rn.edge_params[:a]
+b = rn.edge_params[:b]
+
 sorted_edges = collect(edges(rn.g))
 
 
@@ -48,7 +51,7 @@ sorted_edges = collect(edges(rn.g))
 
 # STAP parameters
 ods = [(1, 64)]
-d = 1.5
+d = 0.01
 
 γ_array = [0.1, 0.5, 0.9]
 
@@ -127,7 +130,7 @@ pi_both = unique(vcat(pi_1, pi_2))
 pe_both = unique(vcat(pe_1, pe_2))
 
 # AV exclusive edges
-oi = [] 
+oi = []
 oe = []
 for (i, ed) in enumerate(sorted_edges)
     # MST
@@ -136,6 +139,7 @@ for (i, ed) in enumerate(sorted_edges)
         push!(oe, ed)
     end
 end
+
 
 ###
 ### Plot nets with paths and save paths in file
@@ -149,7 +153,7 @@ save_paths_tikz(rn.g,
                 imp_labels=["O", "D"],
                 scale=10,
                 standalone_doc=true)
-                
+
 edges_for_plotting = [(e.src, e.dst) for e in pe_both]
 save_graph_tikz_edg(rn.g,
                     [edges_for_plotting],
@@ -158,50 +162,102 @@ save_graph_tikz_edg(rn.g,
                     edge_labels=false,
                     imp_nodes=[1, 64],
                     imp_labels=["O", "D"])
-                
+
 writedlm("test_edge_indexed_paths.dat", indep_paths_ind)
 
 
 ###
-### Optimise
+### Assignment
 ###
 
+# UE and SO for demand callibration
+demand_array = 0.0001:0.0002:0.08
+
+UE_costs = zeros(length(demand_array))
+SO_costs = zeros(length(demand_array))
+
+for (k,q) in enumerate(demand_array)
+
+    ue_flows = multi_pair_stap_nc(rn, ods, q, regime=:ue)
+    so_flows = multi_pair_stap_nc(rn, ods, q, regime=:so)
+
+    ue_cost = total_cost(ue_flows, a, b)
+    so_cost = total_cost(so_flows, a, b)
+
+    UE_costs[k] = ue_cost
+    SO_costs[k] = so_cost
+end
+
+poa = UE_costs ./ SO_costs
+
+plt3 = plot(demand_array, poa, legend=false)
+xlabel!("Demand", xguidefontsize=16)
+ylabel!("PoA", yguidefontsize=16)
+savefig("poa_dcal_mhpaths_gamma.pdf")
+
+# From plot d = 0.01 is a good value (d = 0.02 is also good)
+
+# Mixed Equilibrium assignment (with different penetration rates of AVs)
 results = me_excluded_assignment_penalty_pr(rn,
                                             ods,
                                             demands,
                                             γ_array,
                                             oi,
                                             r_array)
-                                            
 
+TCS = []
+HVCS = []
+AVCS = []
 for (k,γ) in enumerate(γ_array)
-    
+
     # Total and per-Veh costs (MST)
     TC_array = [total_cost(results[3][k][i],
                 rn.edge_params[:a],
                 rn.edge_params[:b])
                 for i in 1:length(r_array)+1]
-                
+
     HVC_array = [partial_cost(results[1][k][i],
                               results[3][k][i],
                               rn.edge_params[:a],
                               rn.edge_params[:b])
                  for i in 1:length(r_array)+1] ./ (1-γ)*d
-                 
+
     AVC_array = [partial_cost(results[2][k][i],
                               results[3][k][i],
                               rn.edge_params[:a],
                               rn.edge_params[:b])
                  for i in 1:length(r_array)+1] ./ γ*d
-                                 
-    ###
-    ### Plotting
-    ###
-    
-    pen_iters = 0:length(r_array)                             
-    
+
+    #PVC_array = TC_array ./ d
+
+    push!(TCS, TC_array)
+    push!(HVCS, HVC_array)
+    push!(AVCS, AVC_array)
+end
+
+
+###
+### Plotting
+###
+
+pen_iters = 0:length(r_array)
+
+y_min = minimum(vcat(TCS...))
+y_max = maximum(vcat(TCS...))
+
+margen = 0.1*(y_max - y_min)
+
+y_min -= margen
+y_max += margen
+
+for (k,γ) in enumerate(γ_array)
+
+    TC_array = TCS[k]
+    HVC_array = HVCS[k]
+    AVC_array = AVCS[k]
+
     # Total cost plot
-    
+
     plt = plot(pen_iters,
                TC_array,
                label="Total cost",
@@ -209,25 +265,26 @@ for (k,γ) in enumerate(γ_array)
                markeralpha = 0.6,
                legend=:bottomright,
                color_palette=palette(:tab10))
-    
-    ylims!(80,140)
-    
+
+    ylims!(y_min, y_max)
+
     xlabel!("Penalty method iterations", xguidefontsize=16)
     ylabel!("Cost", yguidefontsize=16)
     title!("Total costs (γ=$(γ), d=$(d))", titlefontsize=16)
     savefig(plt, "total_costs_mhpaths_gamma_$(γ).pdf")
-    
+
     # Per-vehicle cost plot
-    
+
     plt2 = plot(pen_iters,
-            [HVC_array AVC_array],
-            label=["HV cost MST" "AV cost MST"],
-            markershape=[:dtriangle :circle],
-            markeralpha = 0.6,
-            color_palette=palette(:tab10)[[1,10]])
-          
+                [HVC_array AVC_array],
+                label=["HV per-veh cost" "AV per-veh cost"],
+                markershape=[:dtriangle :circle],
+                markeralpha = 0.6,
+                color_palette=palette(:tab10)[[1,10]])
+
+
     xlabel!("Penalty method iterations", xguidefontsize=16)
     ylabel!("Class cost (per vehicle)", yguidefontsize=16)
     title!("Per-vehicle costs (γ=$(γ), d=$(d))", titlefontsize=16)
-    savefig(plt2, "per_veh_costs_mhpaths_gamma_$(γ).pdf")    
+    savefig(plt2, "per_veh_costs_mhpaths_gamma_$(γ).pdf")
 end
