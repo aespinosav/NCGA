@@ -50,8 +50,13 @@ std_perv_costs_hv = readdlm("std_perv_costs_hv.dat")
 mean_perv_costs_av = readdlm("mean_perv_costs_av.dat")
 std_perv_costs_av = readdlm("std_perv_costs_av.dat")
 
+# Normalised costs
 norm_mean_tot_costs = readdlm("normed_mean_total_costs.dat")
 norm_std_tot_costs = readdlm("std_normed_total_costs.dat")
+
+# Per-vehicle cost differences
+pv_cost_diff = readdlm("perv_mean_costs_diff.dat")
+std_pv_cost_diff =  readdlm("perv_std_cost_diff.dat")
 
 ###
 ### Plotting
@@ -65,7 +70,13 @@ data_margin = 0.15*(y_max - y_min)
 margin = maximum([std_margin, data_margin])
 
 ny_min, ny_max = 0, maximum(norm_mean_tot_costs)
-margin2 = 0.1*ny_max             
+margin2 = 0.1*ny_max
+
+diff_max = maximum(pv_cost_diff)
+diff_min = minimum(pv_cost_diff)
+margin3 = 0.1*(diff_max - diff_min)
+
+yy_min, yy_max = diff_min - margin3, diff_max + margin3
 
 # Total cost plot
 
@@ -93,7 +104,7 @@ for (i,γ) in enumerate(γ_array)
     # Per-vehicle cost plot
     plt2 = plot(pen_iters,
                [mean_perv_costs_hv[:,i] mean_perv_costs_av[:,i]],
-               ribbon=[std_perv_costs_hv std_perv_costs_av],
+               ribbon=[std_perv_costs_hv[:,i] std_perv_costs_av[:,i]],
                label=["HV pv cost" "AV pv cost"],
                markershape=[:dtriangle :circle],
                markeralpha = 0.6,
@@ -109,7 +120,7 @@ for (i,γ) in enumerate(γ_array)
     # Normalised costs
     plt3 = plot(pen_iters,
                 norm_mean_tot_costs[:,i],
-                ribbon=norm_std_tot_costs,
+                ribbon=norm_std_tot_costs[:,i],
                 label="Normalised tot. cost",
                 markershape=[:circle],
                 markeralpha = 0.6,
@@ -118,11 +129,28 @@ for (i,γ) in enumerate(γ_array)
 
     ylims!(ny_min, ny_max + margin2)
 
+    hline!([1], lc=:grey, linestyle=:dash)
     xlabel!("Penalty method iterations", xguidefontsize=16)
     ylabel!("Normalised cost", yguidefontsize=16)
     title!("Normalised total costs (γ=$(γ), d=$(d))", titlefontsize=16)
     savefig(plt3, "ensemble_normed_mean_total_costs_gamma_$(γ).pdf")
 
+    ###########################################################
+
     # Cost difference
+
+    plt4 = plot(pen_iters,
+                pv_cost_diff,
+                ribbon=std_pv_cost_diff[:,i],
+                label="Per-veh cost difference (HV - AV)",
+                markershape=[:circle],
+                legend=:bottomright)
+
+    ylims!(yy_min, yy_max)
+
+    xlabel!("Penalty method iterations", xguidefontsize=16)
+    ylabel!("Cost difference", yguidefontsize=16)
+    title!("Per-vehicle cost difference (γ=$γ, d=$d)", titlefontsize=16)
+    savefig(plt4, "ensemble_perv_cost_diff_gamma_$γ.pdf")
 
 end
