@@ -45,7 +45,9 @@ num_metropolis_steps = 5000
 stagger = 5
 
 # Assignment parameters
-demand_array = 0.0001:0.001:0.3
+demand_array = 0.0001:0.0002:0.08
+#demand_array = 0.00001:0.000005:0.001
+
 
 # Dir with network files
 
@@ -71,9 +73,9 @@ for (k, f) in enumerate(net_files)
     ###
     ### Load network and find paths
     ###
-    
+
     filename = joinpath(ens_dir, f)
-    
+
     rn, ods, ex_edges = load_net_and_find_edges(filename,
                                                 μ,
                                                 p_splice,
@@ -85,15 +87,15 @@ for (k, f) in enumerate(net_files)
 
     ###
     ### Assignments (UE and SO)
-    ###   
+    ###
 
     UE_costs = zeros(length(demand_array))
     SO_costs = zeros(length(demand_array))
 
     for (k,d) in enumerate(demand_array)
 
-        ue_flows = multi_pair_stap_nc(rn, [(O,D)], d, regime=:ue)
-        so_flows = multi_pair_stap_nc(rn, [(O,D)], d, regime=:so)
+        ue_flows = multi_pair_stap_nc(rn, ods, d, regime=:ue)
+        so_flows = multi_pair_stap_nc(rn, ods, d, regime=:so)
 
         ue_cost = total_cost(ue_flows, a, b)
         so_cost = total_cost(so_flows, a, b)
@@ -108,3 +110,8 @@ for (k, f) in enumerate(net_files)
     peak_poa[k] = demand_array[argmax(poa)]
 end
 
+plot(demand_array, PoA_array, legend=false, grid=false)
+ylabel!("PoA", yguidefontsize=16)
+xlabel!("Demand", xguidefontsize=16)
+lens!([0, 0.015], [1, 1.029], inset = (1, bbox(0.5, 0.0, 0.4, 0.4)))
+savefig("d_calibration_poa.pdf")
