@@ -174,6 +174,9 @@ function main()
     r_mean_percentage_links_hv = 0
     r_std_percentage_links_hv = 0
 
+    r_mean_UE_cost = 0
+    r_std_UE_cost = 0
+
     for (i,file) in enumerate(net_files)
 
         # load net
@@ -250,6 +253,8 @@ function main()
         ue_cost = total_cost(ue_flows, a, b)
         so_cost = total_cost(so_flows, a, b)
 
+        r_mean_UE_cost, r_std_UE_cost = update_sums_welford(i, r_mean_UE_cost, r_std_UE_cost, ue_cost)
+
         ###
         ### Mixed EQ on restricted network
         ###
@@ -287,8 +292,8 @@ function main()
             normed_tot_costs = (tot_costs .- so_cost) ./ (ue_cost - so_cost)
 
             # Per-veh costs (and difference)
-            perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / d*(1-γ))[:]
-            perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / d*γ)[:]
+            perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / (d*(1-γ)))[:]
+            perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / (d*γ))[:]
 
             perv_cost_diff = perv_costs_hv - perv_costs_av
 
@@ -315,13 +320,16 @@ function main()
     std_perv_costs_av = sqrt.(calc_var_welford(N, r_std_perv_av))
 
     # % of usable links for HVs
-    std_hv_link_percent = sqrt.(calc_var_welford(r_std_percentage_links_hv))
+    #std_hv_link_percent = sqrt.(calc_var_welford(r_std_percentage_links_hv))
 
     # Normalised costs (relative to UE and SO)
     std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
 
     # Difference of per-veh costs
     std_perv_cost_diff = sqrt.(calc_var_welford(N, r_std_cost_diff))
+
+    # UE cost
+    std_UE_cost = sqrt.(calc_var_welford(N, r_std_UE_cost))
 
     ###
     ### Write data files
@@ -345,7 +353,10 @@ function main()
     writedlm("perv_mean_costs_diff.dat", r_mean_cost_diff)
     writedlm("perv_std_cost_diff.dat", std_perv_cost_diff)
 
-    # Write parameter file
+    # Write parameter filei
+    # add UE cost to parsed args for saving
+    parsed_args["ue_cost"] = r_mean_UE_cost
+
     save("batch_run_params.jld2", parsed_args)
 end
 
