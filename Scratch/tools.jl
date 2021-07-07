@@ -308,6 +308,43 @@ function find_mh_paths(mg,
     return indep_paths_nodes, indep_paths_edges, indep_paths_inds
 end
 
+
+function make_exclusive_edge_set(net,
+                                 sorted_edges,
+                                 O,
+                                 D,
+                                 μ,
+                                 p_splice,
+                                 weight_func,
+                                 num_metropolis_steps,
+                                 stagger)
+
+    # MST
+    mst_inds, mst_edges = find_mst(net, sorted_edges)
+
+    # Sample paths (Metropolis-Hastings)
+    mhp_nodes, mhp_edges, mhp_inds = find_mh_paths(net,
+                                                       sorted_edges,
+                                                   O,
+                                                   D,
+                                                   μ,
+                                                   p_splice,
+                                                   weight_func,
+                                                   num_metropolis_steps,
+                                                   stagger)
+    mhp_all_edges_ind = vcat(mhp_inds...)
+    mhp_all_edges = vcat(mhp_edges...)
+
+    # Union of MST and MH paths
+    hv_permitted_edges_inds = unique(vcat(mst_inds, mhp_all_edges_ind))
+    hv_permitted_edges = unique(vcat(mst_edges, mhp_all_edges))
+
+    # Edges for exclusive AV use
+    av_excl_edges = setdiff(sorted_edges, hv_permitted_edges)
+
+    return av_excl_edges
+end
+
 ###
 ### Bundle functions for easy importing of nets for this
 ###
@@ -327,15 +364,17 @@ function load_net_and_find_edges(filename,
                                  μ,
                                  p_splice,
                                  num_metropolis_steps,
-                                 stagger)
+                                 stagger;
+                                 o_point=[0,0],
+                                 d_point=[1,1])
 
     net = mg = loadgraph(filename, MGFormat())
     rn = skel2rn(mg)
 
     sorted_edges = collect(edges(rn.g))
 
-    O = node_closest_to(net, [0,0]) # lower left-most node
-    D = node_closest_to(net, [1,1]) # upper right-most node
+    O = node_closest_to(net, o_point) # lower left-most node
+    D = node_closest_to(net, d_point) # upper right-most node
     ods = [(O, D)]
 
     # Minimum Spanning Tree
