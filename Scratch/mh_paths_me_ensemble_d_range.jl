@@ -69,7 +69,6 @@ function main()
 
     # MH parameters
     μ = parsed_args["μ"]
-    d = parsed_args["d"]
     p_splice = parsed_args["p_splice"]
 
     # perhaps should be a function of the network size
@@ -90,6 +89,7 @@ function main()
     network_files = filter(s -> split(s, '.')[end] == "mg", files_in_dir)
     net_files = sort(network_files, lt=natural)
 
+    # Use number of nets given, or all of them
     if nn > 0 && nn < length(net_files)
         net_files = net_files[1:nn]
     else
@@ -99,8 +99,8 @@ function main()
 
     #############################################
 
-
-    ld = length(demand_array)
+    # Shorthand for readability
+    ld = length(demand_range)
     lg = length(γ_array)
 
     # Running mean and std containers (Welford alorithm)
@@ -109,6 +109,12 @@ function main()
 
     r_mean_normed_tot_costs = zeros(ld, lg)
     r_std_normed_tot_costs = zeros(ld, lg)
+
+    r_mean_perv_hv = zeros(ld, lg)
+    r_std_perv_hv = zeros(ld, lg)
+
+    r_mean_perv_av = zeros(ld, lg)
+    r_std_perv_av = zeros(ld, lg)
 
     #r_mean_normed_tot_costs = zeros(length(γ_array), length(demand_array))
     #r_std_normed_tot_costs = zeros(length(γ_array), length(demand_array))
@@ -156,7 +162,7 @@ function main()
 
 
 
-        for (k,d) in demand_range
+        for (k,d) in enumerate(demand_range)
 
             ###
             ### Assignment results
@@ -185,6 +191,10 @@ function main()
 
             for (j, γ) in enumerate(γ_array)
 
+                ###
+                ### Flows and edge costs
+                ###
+
                 # for each γⱼ (jth value of γ_array)
                 flows_hv = results[1][j][end]
                 flows_av = results[2][j][end]
@@ -193,9 +203,18 @@ function main()
                 # Edge costs
                 edge_costs = travel_times(flows_agg, a, b)
 
+
+                ###
+                ### Ensemble calculations
+                ###
+
                 # Total costs (and normalisation)
-                tot_cost = edge_cost ⋅ flows_agg
+                tot_cost = edge_costs ⋅ flows_agg
                 normed_tot_cost = (tot_cost - so_cost) / (ue_cost - so_cost)
+
+                # Per-vehicle costs
+                perv_costs_hv = (flows_hv ⋅ edge_costs) / (d*(1-γ))
+                perv_costs_av = (flows_av ⋅ edge_costs) / (d*γ)
 
 
                 ### Update containers
@@ -212,11 +231,21 @@ function main()
                 # Normalised costs
                 r_mean_normed_tot_costs[k,j],  r_std_normed_tot_costs[k,j] = begin
 
-                   update_sums_welford(i,
+                    update_sums_welford(i,
                                         r_mean_normed_tot_costs[k,j],
                                         r_std_normed_tot_costs[k,j],
                                         normed_tot_cost)
                 end
+
+                # Per-vehilce costs
+                r_mean_perv_hv[k,j], r_std_perv_hv[k,j] = begin
+
+                    update_sums_welford(i,
+                                        r_mean_perv_hv[k,j],
+                                        r_std_perv_hv[k,j],
+                                        )
+                end
+
 
 
                 # Total costs (and normalisation)
@@ -232,8 +261,21 @@ function main()
                 # Update containers
                 #r_mean_tot[:,j], r_std_tot[:,j] = update_sums_welford(i, r_mean_tot[:,j], r_std_tot[:,j], tot_costs)
 
-            end
-        end
-    end
+            end  # γ loop
+        end  # d loop
+    end  # net loop
 
+    # Welford eval
+    std_tot_costs = sqrt.(calc_var_welford(N, r_std_tot))
+    std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
+
+    # Save files
+    writedlm("d_range_mean_tot_costs.dat", r_mean_tot)
+    println("file saved: d_range_mean_tot_costs.dat")
+
+    writedlm("d_range_std_tot_costs.dat", r_std_tot)
+    println("file saved: d_range_std_tot_costs.dat")
 end
+
+# Run main function
+main()
