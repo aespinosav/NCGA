@@ -206,6 +206,14 @@ function update_sums_welford(r_N, r_mean, r_M2, new_x)
     return r_mean, r_M2
 end
 
+function update_sums_welford!(r_N, r_mean, r_M2, new_x)
+    delta = new_x - r_mean
+    r_mean += delta / r_N
+    delta_2 = new_x - r_mean
+    r_M2 += delta .* delta_2
+end
+
+
 # This function seems almost pointless...
 """
 Running sample variance
