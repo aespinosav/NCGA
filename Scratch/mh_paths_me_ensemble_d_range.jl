@@ -15,83 +15,18 @@ using ArgParse,
 
 
 ###
-### Parse args (CL interface)
-###
-
-function parse_commandline()
-    s = ArgParseSettings()
-
-    @add_arg_table! s begin
-         "--optim"
-            help = "Which optimiser: `gurobi` or `ipopt`?"
-            arg_type = Symbol
-            default = :gurobi
-        "--penalty_steps"
-            help = "Steps in the 'penalty method'"
-            arg_type = Int
-            default = 7
-        "--gamma_init"
-            help = "Penetration rate start value" 
-            arg_type = Float64
-            default= 0.1
-        "--gamma_step"
-            help = "Penetration rate start value" 
-            arg_type = Float64
-            default= 0.4
-        "--gamma_stop"
-            help = "Penetration rate start value" 
-            arg_type = Float64
-            default= 0.9
-        "--dir"
-            help = "Directory of files with networks in an ensemble"
-            arg_type = String
-            default = "."
-        "--num_nets"
-            help = "Number of networks to use"
-            arg_type = Int
-            default = -1
-        "--mh_steps"
-            help = "Transitions to attempt in MH algorithm"
-            arg_type = Int
-            default = 10000
-        "--path_sample_stagger"
-            help = "Spacing between 'independent' samples of MH paths"
-            arg_type = Int
-            default = 10
-        "--d_start"
-            help = "Demand range start"
-            required = true
-            arg_type = Float64
-        "--d_step"
-            help = "Demand range step size"
-            required = true
-            arg_type = Float64 
-        "--d_stop"
-            help = "Demand range stop"
-            required = true
-            arg_type = Float64 
-        "μ"
-            help = "Temperature parameter for MH path sampling"
-            required = true
-            arg_type = Float64
-        "p_splice"
-            help = "Splicing prob for MH step transition: 0 < p_splice < 1"
-            required = true
-            arg_type = Float64
-    end
-
-    return parse_args(s)
-end
-
-
-###
-### Incidence matrix correction (and other functions)
+### Function definitions
 ###
 
 include("tools.jl")
 include("penalty.jl")
 
-parsed_args = parse_commandline()
+# Command line args parsing (in tools.jl)
+parsed_args = parse_commandline_drange()
+
+###
+### Gurobi global varaible for licence token
+###
 
 if parsed_args["optim"] == :gurobi
     using Gurobi
@@ -108,6 +43,8 @@ end
 ###
 
 function main()
+
+    ### Arguments from command line:
 
     # Optimiser choice
     optimiser = parsed_args["optim"]
@@ -146,6 +83,9 @@ function main()
 
     ############################################
 
+
+    # Directories
+
     files_in_dir = readdir(ens_dir)
     network_files = filter(s -> split(s, '.')[end] == "mg", files_in_dir)
     net_files = sort(network_files, lt=natural)
@@ -159,24 +99,32 @@ function main()
 
     #############################################
 
+
+    ld = length(demand_array)
+    lg = length(γ_array)
+
     # Running mean and std containers (Welford alorithm)
-    r_mean_tot = zeros(length(γ_array), length(demand_array))
-    r_std_tot = zeros(length(γ_array), length(demand_array))
+    r_mean_tot = zeros(ld, lg)
+    r_std_tot = zeros(ld, lg)
 
-    r_mean_normed_tot_costs = zeros(length(γ_array), length(demand_array))
-    r_std_normed_tot_costs = zeros(length(γ_array), length(demand_array))
+    r_mean_normed_tot_costs = zeros(ld, lg)
+    r_std_normed_tot_costs = zeros(ld, lg)
 
-    r_mean_perv_hv = zeros(length(γ_array), length(demand_array))
-    r_std_perv_hv = zeros(length(γ_array), length(demand_array))
+    #r_mean_normed_tot_costs = zeros(length(γ_array), length(demand_array))
+    #r_std_normed_tot_costs = zeros(length(γ_array), length(demand_array))
 
-    r_mean_perv_av = zeros(length(γ_array), length(demand_array))
-    r_std_perv_av = zeros(length(γ_array), length(demand_array))
+    #r_mean_perv_hv = zeros(length(γ_array), length(demand_array))
+    #r_std_perv_hv = zeros(length(γ_array), length(demand_array))
 
-    r_mean_cost_diff = zeros(length(γ_array), length(demand_array))
-    r_std_cost_diff = zeros(length(γ_array), length(demand_array))
+    #r_mean_perv_av = zeros(length(γ_array), length(demand_array))
+    #r_std_perv_av = zeros(length(γ_array), length(demand_array))
 
-    r_mean_percentage_links_hv = 0
-    r_std_percentage_links_hv = 0
+    #r_mean_cost_diff = zeros(length(γ_array), length(demand_array))
+    #r_std_cost_diff = zeros(length(γ_array), length(demand_array))
+
+    #
+    #r_mean_percentage_links_hv = 0
+    #r_std_percentage_links_hv = 0
 
     for (i,file) in enumerate(net_files)
 
@@ -204,31 +152,8 @@ function main()
                                                 num_metropolis_steps,
                                                 stagger)
 
-        av_excl_edges_inds = findfirst.(isequal.(av_excl_edges) , sorted_edges)
+        av_excl_edges_inds = findfirst.(isequal.(av_excl_edges), [sorted_edges])
 
-
-        #MST
-        mst_inds, mst_edges = find_mst(net, sorted_edges)
-        # MH Paths
-        mhp_nodes, mhp_edges, mhp_inds = find_mh_paths(net,
-                                                       sorted_edges,
-                                                       O,
-                                                       D,
-                                                       μ,
-                                                       p_splice,
-                                                       weight_func,
-                                                       num_metropolis_steps,
-                                                       stagger)
-        mhp_all_edges_ind = vcat(mhp_inds...)
-        mhp_all_edges = vcat(mhp_edges...)
-
-        # HV permitted edges
-        hv_permitted_edges_inds = unique(vcat(mst_inds, mhp_all_edges_ind))
-        hv_permitted_edges = unique(vcat(mst_edges, mhp_all_edges))
-
-        # AV exclusive edges
-        av_excl_edges = setdiff(sorted_edges, hv_permitted_edges)
-        av_excl_edges_inds = setdiff(1:length(sorted_edges), hv_permitter_edges_inds)
 
 
         for (k,d) in demand_range
@@ -258,26 +183,56 @@ function main()
                                                         r_array,
                                                         solver=optimiser)
 
-            # for each γⱼ (jth value of γ_array)
-            flows_hv = hcat(results[1][j]...)
-            flows_av = hcat(results[2][j]...)
-            flows_agg = hcat(results[3][j]...)
+            for (j, γ) in enumerate(γ_array)
 
-            # edge costs
+                # for each γⱼ (jth value of γ_array)
+                flows_hv = results[1][j][end]
+                flows_av = results[2][j][end]
+                flows_agg = results[3][j][end]
 
-            edge_costs = travel_times.(flows_agg[j], a, b)
+                # Edge costs
+                edge_costs = travel_times(flows_agg, a, b)
 
-            # Total costs (and normalisation)
-            tot_costs = mapslices(x -> total_cost(x, a, b), flows_agg, dims=1)[:]
-            normed_tot_costs = (tot_costs .- so_cost) ./ (ue_cost - so_cost)
-
-            # Per-veh costs (and difference)
-            perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / (d*(1-γ)))[:]
-            perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / (d*γ))[:]
-
-            perv_cost_diff = perv_costs_hv - perv_costs_av
+                # Total costs (and normalisation)
+                tot_cost = edge_cost ⋅ flows_agg
+                normed_tot_cost = (tot_cost - so_cost) / (ue_cost - so_cost)
 
 
+                ### Update containers
+
+                # Total costs
+                r_mean_tot[k,j], r_std_tot[k,j] = begin
+
+                   update_sums_welford(i,
+                                        r_mean_tot[k,j],
+                                        r_std_tot[k,j],
+                                        tot_cost)
+                end
+
+                # Normalised costs
+                r_mean_normed_tot_costs[k,j],  r_std_normed_tot_costs[k,j] = begin
+
+                   update_sums_welford(i,
+                                        r_mean_normed_tot_costs[k,j],
+                                        r_std_normed_tot_costs[k,j],
+                                        normed_tot_cost)
+                end
+
+
+                # Total costs (and normalisation)
+                #tot_costs = mapslices(x -> total_cost(x, a, b), flows_agg, dims=1)[:]
+                #normed_tot_costs = (tot_costs .- so_cost) ./ (ue_cost - so_cost)
+
+                # Per-veh costs (and difference)
+                #perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / (d*(1-γ)))[:]
+                #perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / (d*γ))[:]
+
+                #perv_cost_diff = perv_costs_hv - perv_costs_av
+
+                # Update containers
+                #r_mean_tot[:,j], r_std_tot[:,j] = update_sums_welford(i, r_mean_tot[:,j], r_std_tot[:,j], tot_costs)
+
+            end
         end
     end
 
