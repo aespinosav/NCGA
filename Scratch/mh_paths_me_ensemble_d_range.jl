@@ -172,7 +172,7 @@ function main()
             so_cost = total_cost(so_flows, a, b)
 
             update_sums_welford!(i, view(r_mean_ue, k), view(r_std_ue, k), ue_cost)
-            update_sums_welford!(i, view(r_mean_so, k), viev(r_std_so, k), so_cost)
+            update_sums_welford!(i, view(r_mean_so, k), view(r_std_so, k), so_cost)
 
             ###
             ### Mixed EQ on restricted network
@@ -240,20 +240,8 @@ function main()
                                     perv_costs_av)
 
 
-
-
-                # Total costs (and normalisation)
-                #tot_costs = mapslices(x -> total_cost(x, a, b), flows_agg, dims=1)[:]
-                #normed_tot_costs = (tot_costs .- so_cost) ./ (ue_cost - so_cost)
-
-                # Per-veh costs (and difference)
-                #perv_costs_hv = (sum((flows_hv .* edge_costs), dims=1) / (d*(1-γ)))[:]
-                #perv_costs_av = (sum((flows_av .* edge_costs), dims=1) / (d*γ))[:]
-
                 #perv_cost_diff = perv_costs_hv - perv_costs_av
 
-                # Update containers
-                #r_mean_tot[:,j], r_std_tot[:,j] = update_sums_welford(i, r_mean_tot[:,j], r_std_tot[:,j], tot_costs)
 
             end  # γ loop
         end  # d loop
@@ -297,9 +285,9 @@ function main()
 
     # UE and SO costs (col1:mean , col2:std)
     writedlm("d_range_mean_ue_costs.dat", hcat(r_mean_ue, r_std_ue))
-    println("saved file: d_range_ue_costs.dat")
+    println("file saved: d_range_ue_costs.dat")
     writedlm("d_range_mean_so_costs.dat", hcat(r_mean_so, r_std_so))
-    println("saved file: d_range_so_costs.dat")
+    println("file saved: d_range_so_costs.dat")
 
     save("batch_run_params_d_range.jld2", parsed_args)
 end
