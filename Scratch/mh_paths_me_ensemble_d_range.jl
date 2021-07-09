@@ -13,7 +13,6 @@ using ArgParse,
       FileIO,
       NaturalSort
 
-
 ###
 ### Function definitions
 ###
@@ -82,7 +81,6 @@ function main()
 
     ############################################
 
-
     # Directories
 
     files_in_dir = readdir(ens_dir)
@@ -117,21 +115,14 @@ function main()
     r_std_perv_av = zeros(ld, lg)
 
     # UE and SO costs
-
-
-    #r_mean_normed_tot_costs = zeros(length(γ_array), length(demand_array))
-    #r_std_normed_tot_costs = zeros(length(γ_array), length(demand_array))
-
-    #r_mean_perv_hv = zeros(length(γ_array), length(demand_array))
-    #r_std_perv_hv = zeros(length(γ_array), length(demand_array))
-
-    #r_mean_perv_av = zeros(length(γ_array), length(demand_array))
-    #r_std_perv_av = zeros(length(γ_array), length(demand_array))
+    r_mean_ue = zeros(ld)
+    r_mean_so = zeros(ld)
+    r_std_ue = zeros(ld)
+    r_std_so = zeros(ld)
 
     #r_mean_cost_diff = zeros(length(γ_array), length(demand_array))
     #r_std_cost_diff = zeros(length(γ_array), length(demand_array))
 
-    #
     #r_mean_percentage_links_hv = 0
     #r_std_percentage_links_hv = 0
 
@@ -179,6 +170,9 @@ function main()
 
             ue_cost = total_cost(ue_flows, a, b)
             so_cost = total_cost(so_flows, a, b)
+
+            update_sums_welford!(i, view(r_mean_ue, k), view(r_std_ue, k), ue_cost)
+            update_sums_welford!(i, view(r_mean_so, k), viev(r_std_so, k), so_cost)
 
             ###
             ### Mixed EQ on restricted network
@@ -265,15 +259,14 @@ function main()
         end  # d loop
     end  # net loop
 
-    # Welford eval
+    # Welford eval std
     r_std_tot= sqrt.(calc_var_welford(N, r_std_tot))
-
     r_std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
-
     r_std_perv_hv = sqrt.(calc_var_welford(N, r_std_perv_hv))
-
     r_std_perv_av = sqrt.(calc_var_welford(N, r_std_perv_av))
 
+    r_std_ue = sqrt.(calc_var_welford(N, r_std_ue))
+    r_std_so = sqrt.(calc_var_welford(N, r_std_so))
 
     ###
     ### Save files
@@ -291,7 +284,6 @@ function main()
     writedlm("d_range_std_normed_tot_costs.dat", r_std_normed_tot_costs)
     println("file saved: d_range_std_normed_tot_costs.dat")
 
-
     # Per-vehicle cost
     writedlm("d_range_mean_perv_costs_hv.dat", r_mean_perv_hv)
     println("file saved: d_range_mean_perv_costs_hv.dat")
@@ -302,6 +294,14 @@ function main()
     println("file saved: d_range_mean_perv_costs_av.dat")
     writedlm("d_range_std_perv_costs_av.dat", r_std_perv_av)
     println("file saved: d_range_std_perv_costs_av.dat")
+
+    # UE and SO costs (col1:mean , col2:std)
+    writedlm("d_range_mean_ue_costs.dat", hcat(r_mean_ue, r_std_ue))
+    println("saved file: d_range_ue_costs.dat")
+    writedlm("d_range_mean_so_costs.dat", hcat(r_mean_so, r_std_so))
+    println("saved file: d_range_so_costs.dat")
+
+    save("batch_run_params_d_range.jld2", parsed_args)
 end
 
 # Run main function
