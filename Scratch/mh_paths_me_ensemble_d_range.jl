@@ -116,6 +116,9 @@ function main()
     r_mean_perv_av = zeros(ld, lg)
     r_std_perv_av = zeros(ld, lg)
 
+    # UE and SO costs
+
+
     #r_mean_normed_tot_costs = zeros(length(γ_array), length(demand_array))
     #r_std_normed_tot_costs = zeros(length(γ_array), length(demand_array))
 
@@ -220,31 +223,28 @@ function main()
                 ### Update containers
 
                 # Total costs
-                r_mean_tot[k,j], r_std_tot[k,j] = begin
-
-                   update_sums_welford(i,
-                                        r_mean_tot[k,j],
-                                        r_std_tot[k,j],
-                                        tot_cost)
-                end
+                update_sums_welford!(i,
+                                    view(r_mean_tot, k, j),
+                                    view(r_std_tot, k, j),
+                                    tot_cost)
 
                 # Normalised costs
-                r_mean_normed_tot_costs[k,j],  r_std_normed_tot_costs[k,j] = begin
+                update_sums_welford!(i,
+                                    view(r_mean_normed_tot_costs, k, j),
+                                    view(r_std_normed_tot_costs, k, j),
+                                    normed_tot_cost)
 
-                    update_sums_welford(i,
-                                        r_mean_normed_tot_costs[k,j],
-                                        r_std_normed_tot_costs[k,j],
-                                        normed_tot_cost)
-                end
+                # Per-vehicle costs
+                update_sums_welford!(i,
+                                    view(r_mean_perv_hv, k, j),
+                                    view(r_std_perv_hv, k, j),
+                                    perv_costs_hv)
 
-                # Per-vehilce costs
-                r_mean_perv_hv[k,j], r_std_perv_hv[k,j] = begin
+                update_sums_welford!(i,
+                                    view(r_mean_perv_av, k, j),
+                                    view(r_std_perv_av, k,j),
+                                    perv_costs_av)
 
-                    update_sums_welford(i,
-                                        r_mean_perv_hv[k,j],
-                                        r_std_perv_hv[k,j],
-                                        )
-                end
 
 
 
@@ -266,15 +266,42 @@ function main()
     end  # net loop
 
     # Welford eval
-    std_tot_costs = sqrt.(calc_var_welford(N, r_std_tot))
-    std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
+    r_std_tot= sqrt.(calc_var_welford(N, r_std_tot))
 
-    # Save files
+    r_std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs))
+
+    r_std_perv_hv = sqrt.(calc_var_welford(N, r_std_perv_hv))
+
+    r_std_perv_av = sqrt.(calc_var_welford(N, r_std_perv_av))
+
+
+    ###
+    ### Save files
+    ###
+
+    # Total cost
     writedlm("d_range_mean_tot_costs.dat", r_mean_tot)
     println("file saved: d_range_mean_tot_costs.dat")
-
     writedlm("d_range_std_tot_costs.dat", r_std_tot)
     println("file saved: d_range_std_tot_costs.dat")
+
+    # Normalised cost
+    writedlm("d_range_mean_normed_tot_costs.dat", r_mean_normed_tot_costs)
+    println("file saved: d_range_mean_normed_tot_costs.dat")
+    writedlm("d_range_std_normed_tot_costs.dat", r_std_normed_tot_costs)
+    println("file saved: d_range_std_normed_tot_costs.dat")
+
+
+    # Per-vehicle cost
+    writedlm("d_range_mean_perv_costs_hv.dat", r_mean_perv_hv)
+    println("file saved: d_range_mean_perv_costs_hv.dat")
+    writedlm("d_range_std_perv_costs_hv.dat", r_std_perv_hv)
+    println("file saved: d_range_std_perv_costs_hv.dat")
+
+    writedlm("d_range_mean_perv_costs_av.dat", r_mean_perv_av)
+    println("file saved: d_range_mean_perv_costs_av.dat")
+    writedlm("d_range_std_perv_costs_av.dat", r_std_perv_av)
+    println("file saved: d_range_std_perv_costs_av.dat")
 end
 
 # Run main function

@@ -206,11 +206,18 @@ function update_sums_welford(r_N, r_mean, r_M2, new_x)
     return r_mean, r_M2
 end
 
-function update_sums_welford!(r_N, r_mean, r_M2, new_x)
-    delta = new_x - r_mean
-    r_mean += delta / r_N
-    delta_2 = new_x - r_mean
-    r_M2 += delta .* delta_2
+#function update_sums_welford!(r_n::Real, r_mean::Real, r_m2::Real, new_x::Real)
+#    delta = new_x - r_mean
+#    r_mean += delta / r_n
+#    delta_2 = new_x - r_mean
+#    r_m2 += delta * delta_2
+#end
+
+function update_sums_welford!(r_n::Real, r_mean::AbstractArray, r_m2::AbstractArray, new_x)
+    delta = new_x .- r_mean
+    r_mean .+= delta / r_n
+    delta_2 = new_x .- r_mean
+    r_m2 .+= delta .* delta_2
 end
 
 
