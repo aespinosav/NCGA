@@ -75,7 +75,7 @@ function main()
 
     plt1 = plot(demand_range,
                 tot_costs_mean,
-                ribbon = tot_costs_std,
+                #ribbon = tot_costs_std,
                 label = labs,
                 markershape = [:circle :dtriangle :square],
                 legend=:topleft)
@@ -83,7 +83,7 @@ function main()
     plot!(demand_range,
           [ue_costs[:,1] so_costs[:,1]],
           #ribbon=[ue_costs[:,2] so_costs[:,2]],
-          label = ["UE costs" "SO costs"],
+          label = ["UE" "SO"],
           linestyle = :dash,
           linecolor = [:grey :black])
 
@@ -101,10 +101,15 @@ function main()
                 label = labs,
                 markershape = [:circle :dtriangle :square])
 
-    hline!([1, 0],
-           label=["UE cost" "SO cost"],
-           lc=[:grey :black],
+    hline!([1],
+           label="UE",
+           lc=:grey,
            linestyle=:dash)
+
+    hline!([0],
+            label="SO",
+            linecolor=:black,
+            linestyle=:dash)
 
     xlabel!("Demand", xguidefontsize=16)
     ylabel!("Mean normalised ensemble cost", yguidefontsize=16)
@@ -112,6 +117,40 @@ function main()
     savefig(plt2, "norm_ens_costs_d_range.pdf")
 
     # Per-veh cost plot
+
+    labs1 = reshape(["HVs γ=$(γ)" for γ in γ_array],
+                    1,
+                    length(γ_array))
+
+    labs2 = reshape(["AVs γ=$(γ)" for γ in γ_array],
+                    1,
+                    length(γ_array))
+
+    plt3 = plot(demand_range,
+                per_veh_hv_mean,
+                label = labs1,
+                linestyle = :solid,
+                markershape = :square)
+
+    plot!(demand_range,
+         per_veh_av_mean,
+         label = labs2,
+         linestyle = :solid,
+         markershape = :dtriangle)
+
+    ue_pv = ue_costs[:,1] ./ demand_range
+
+    plot!(demand_range,
+          ue_pv,
+          label="PV cost UE",
+          linewidth=2,
+          linecolor=:black,
+          linestyle=:dash)
+
+    xlabel!("Demand", xguidefontsize=16)
+    ylabel!("Per-vehicle costs", yguidefontsize=16)
+
+    savefig(plt3, "perv_ens_costs_d_range.pdf")
 end
 
 main()
