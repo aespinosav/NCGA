@@ -103,6 +103,10 @@ function parse_commandline_drange()
             help = "Spacing between 'independent' samples of MH paths"
             arg_type = Int
             default = 10
+        "--num_path_samples"
+            help = "If using different path sets, choose how many"
+            arg_type = Int
+            default = 5
         "--d_start"
             help = "Demand range start"
             required = true
@@ -362,7 +366,7 @@ function find_mh_paths(mg,
                        stagger)
 
 
-# Metropolis-Hastings (Flötteröd + Bierlaire)
+    # Metropolis-Hastings (Flötteröd + Bierlaire)
 
     g_for_sampling = SimpleWeightedDiGraph(weighted_adjacency(mg))
 
@@ -406,7 +410,7 @@ function make_exclusive_edge_set(net,
 
     # Sample paths (Metropolis-Hastings)
     mhp_nodes, mhp_edges, mhp_inds = find_mh_paths(net,
-                                                       sorted_edges,
+                                                   sorted_edges,
                                                    O,
                                                    D,
                                                    μ,
@@ -425,6 +429,71 @@ function make_exclusive_edge_set(net,
     av_excl_edges = setdiff(sorted_edges, hv_permitted_edges)
 
     return av_excl_edges
+end
+
+function make_exclusive_edge_set_ind(net,
+                                    sorted_edges,
+                                    O,
+                                    D,
+                                    μ,
+                                    p_splice,
+                                    weight_func,
+                                    num_metropolis_steps,
+                                    stagger)
+
+    # MST
+    mst_inds, mst_edges = find_mst(net, sorted_edges)
+
+    # Sample paths (Metropolis-Hastings)
+    mhp_nodes, mhp_edges, mhp_inds = find_mh_paths(net,
+                                                   sorted_edges,
+                                                   O,
+                                                   D,
+                                                   μ,
+                                                   p_splice,
+                                                   weight_func,
+                                                   num_metropolis_steps,
+                                                   stagger)
+    mhp_all_edges_ind = vcat(mhp_inds...)
+    mhp_all_edges = vcat(mhp_edges...)
+
+    # Union of MST and MH paths
+    hv_permitted_edges_inds = unique(vcat(mst_inds, mhp_all_edges_ind))
+    hv_permitted_edges = unique(vcat(mst_edges, mhp_all_edges))
+
+    # Edges for exclusive AV use
+    av_excl_edges = setdiff(sorted_edges, hv_permitted_edges)
+    av_excl_edges_inds = findfirst.(isequal.(av_excl_edges), [sorted_edges])
+
+    return av_excl_edges_inds
+end
+
+function excl_edge_set_sample(net,
+                              sorted_edges,
+                              O,
+                              D,
+                              μ,
+                              p_splice,
+                              weight_func,
+                              num_metropolis_steps,
+                              stagger,
+                              samples)
+
+    sampled_sets = Array{Int,1}[]
+    for i in 1:samples
+        s = make_exclusive_edge_set_ind(net,
+                                        sorted_edges,
+                                        O,
+                                        D,
+                                        μ,
+                                        p_splice,
+                                        weight_func,
+                                        num_metropolis_steps,
+                                        stagger)
+        push!(sampled_sets, s)
+    end
+
+    return sampled_sets
 end
 
 ###
