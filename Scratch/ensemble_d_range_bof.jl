@@ -248,42 +248,38 @@ function main()
         end # path sample loop
     end  # net loop
 
+    ### Update std
+
+    # These are arrays of matrices
     r_std_tot = map(x -> sqrt.(calc_var_welford(N, x)), r_std_tot)
     r_std_normed_tot_costs = map(x -> sqrt.(calc_var_welford(N,x)), r_std_normed_tot_costs)
     r_std_perv_hv = map(x -> sqrt.(calc_var_welford(N, x)), r_std_perv_hv)
     r_std_perv_av = map(x -> sqrt.(calc_var_welford(N, x)), r_std_perv_av)
 
-
-    #for l in 1:samples
-        # Welford eval std
-   #     r_std_tot= sqrt.(calc_var_welford(N, r_std_tot[l]))
-   #     r_std_normed_tot_costs = sqrt.(calc_var_welford(N, r_std_normed_tot_costs[l]))
-   #     r_std_perv_hv = sqrt.(calc_var_welford(N, r_std_perv_hv[l]))
-   #     r_std_perv_av = sqrt.(calc_var_welford(N, r_std_perv_av[l]))
-   # end
-
+    # These are just vectors
     r_std_ue = sqrt.(calc_var_welford(N, r_std_ue))
     r_std_so = sqrt.(calc_var_welford(N, r_std_so))
 
     ###
-    ### Save files
+    ### Save data (using JLD2)
     ###
 
-    save("d_range_mean_tot_costs_samps.jld2", r_mean_tot)
-    save("d_range_std_tot_costs_samps.jld2", r_std_tot)
-    save("d_range_mean_normed_costs_samps.jld2", r_mean_normed_tot_costs)
-    save("d_range_std_normed_costs_samps.jld2", r_std_normed_tot_costs)
-    save("d_range_mean_perv_costs_hv_samps.jld2", r_mean_perv_hv)
-    save("d_range_std_perv_costs_hv_samps.jld2", r_std_perv_hv)
-    save("d_range_mean_perv_costs_av_samps.jld2", r_mean_perv_av)
-    save("d_range_std_perv_costs_av_samps.jld2", r_std_perv_av)
+    data_dict = Dict("mean_tot_costs" => r_mean_tot,
+                     "std_tot_costs" => r_std_tot,
+                     "mean_norm_costs" => r_mean_normed_tot_costs,
+                     "std_norm_costs" => r_std_normed_tot_costs,
+                     "mean_perv_hv" => r_mean_perv_hv,
+                     "std_perv_hv" => r_std_perv_hv,
+                     "mean_perv_av" => r_mean_perv_av,
+                     "std_perv_hv" => r_std_perv_av,
+                     "mean_ue" => r_mean_ue,
+                     "std_ue" => r_std_ue,
+                     "mean_so" => r_mean_so,
+                     "std_so" => r_std_so)
 
-    # UE and SO costs (col1:mean , col2:std)
-    writedlm("d_range_mean_ue_costs.dat", hcat(r_mean_ue, r_std_ue))
-    writedlm("d_range_mean_so_costs.dat", hcat(r_mean_so, r_std_so))
-
-    # Batch run params
-    save("batch_run_params_d_range.jld2", parsed_args)
+    # Save data AND parsed_args dict
+    saving_dict = merge(data_dict, parsed_args)
+    save("d_range_bof_data.jld2", saving_dict)
 end
 
 # Run main function
