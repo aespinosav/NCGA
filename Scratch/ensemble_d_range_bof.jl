@@ -200,7 +200,6 @@ function main()
                     # Edge costs
                     edge_costs = travel_times(flows_agg, a, b)
 
-
                     ###
                     ### Ensemble calculations
                     ###
