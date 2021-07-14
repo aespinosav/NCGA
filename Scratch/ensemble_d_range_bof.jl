@@ -100,22 +100,26 @@ function main()
 
     #############################################
 
+
+
+
+
     # Shorthand for readability
     ld = length(demand_range)
     lg = length(γ_array)
 
     # Running mean and std containers (Welford alorithm)
-    r_mean_tot = fill(zeros(ld, lg), samples)
-    r_std_tot = fill(zeros(ld, lg), samples)
+    r_mean_tot = zeros(ld, lg)
+    r_std_tot = zeros(ld, lg)
 
-    r_mean_normed_tot_costs = fill(zeros(ld, lg), samples)
-    r_std_normed_tot_costs = fill(zeros(ld, lg), samples)
+    r_mean_normed_tot_costs = zeros(ld, lg)
+    r_std_normed_tot_costs = zeros(ld, lg)
 
-    r_mean_perv_hv = fill(zeros(ld, lg), samples)
-    r_std_perv_hv = fill(zeros(ld, lg), samples)
+    r_mean_perv_hv = zeros(ld, lg)
+    r_std_perv_hv = zeros(ld, lg)
 
-    r_mean_perv_av = fill(zeros(ld, lg), samples)
-    r_std_perv_av = fill(zeros(ld, lg), samples)
+    r_mean_perv_av = zeros(ld, lg)
+    r_std_perv_av = zeros(ld, lg)
 
     # UE and SO costs
     r_mean_ue = zeros(ld)
@@ -129,6 +133,9 @@ function main()
     #r_mean_percentage_links_hv = 0
     #r_std_percentage_links_hv = 0
 
+
+
+
     for (i,file) in enumerate(net_files)
 
         # Load net
@@ -140,8 +147,7 @@ function main()
         O = node_closest_to(net, [0,0]) # lower left-most node
         D = node_closest_to(net, [1,1]) # upper right-most node
 
-        # Identify edges
-
+        # Samples of HV edge sets
         set_samples = excl_edge_set_sample(net,
                                            sorted_edges,
                                            O,
@@ -153,98 +159,109 @@ function main()
                                            stagger,
                                            samples)
 
-        for (l,s) in enumerate(set_samples)
 
-            for (k,d) in enumerate(demand_range)
+        for (k,d) in enumerate(demand_range)
 
-                ###
-                ### Assignment results
-                ###
+            ### UE and SO
 
-                ### UE and SO
+            # Note: These functions use gurobi by default
+            ue_flows = multi_pair_stap_nc(rn, [(O,D)], d, regime=:ue)
+            so_flows = multi_pair_stap_nc(rn, [(O,D)], d, regime=:so)
 
-                # Note: These functions use gurobi by default
-                ue_flows = multi_pair_stap_nc(rn, [(O,D)], d, regime=:ue)
-                so_flows = multi_pair_stap_nc(rn, [(O,D)], d, regime=:so)
+            ue_cost = total_cost(ue_flows, a, b)
+            so_cost = total_cost(so_flows, a, b)
 
-                ue_cost = total_cost(ue_flows, a, b)
-                so_cost = total_cost(so_flows, a, b)
+            update_sums_welford!(i, view(r_mean_ue, k), view(r_std_ue, k), ue_cost)
+            update_sums_welford!(i, view(r_mean_so, k), view(r_std_so, k), so_cost)
 
-                update_sums_welford!(i, view(r_mean_ue, k), view(r_std_ue, k), ue_cost)
-                update_sums_welford!(i, view(r_mean_so, k), view(r_std_so, k), so_cost)
-
-                ###
-                ### Mixed EQ on restricted network
-                ###
-
+            ### Mixed EQ on restricted network
+            sample_results = []
+            for s in samples
                 results = me_excluded_assignment_penalty_pr(rn,
-                                                            [(O,D)],
-                                                            [d],
-                                                            γ_array,
-                                                            s,
-                                                            r_array,
-                                                            solver=optimiser)
+                                                           [(O,D)],
+                                                           [d],
+                                                           γ_array,
+                                                           s,
+                                                           r_array,
+                                                           solver=optimiser)
 
+                # Ugly because of bad past life choices
+                red_results = [map(x -> x[end], results[i]) for i in 1:3]
 
-                for (j, γ) in enumerate(γ_array)
+                push!(sample_results, red_results)
+            end
 
-                    ###
+            for (j, γ) in enumerate(γ_array)
+
+                min_tot = Inf
+                min_norm = Inf
+                min_pvh = Inf
+                min_pva = Inf
+                for sn in 1:length(samples)
+
                     ### Flows and edge costs
-                    ###
+
+                    results = red_results[sn]
 
                     # for each γⱼ (jth value of γ_array)
-                    flows_hv = results[1][j][end]
-                    flows_av = results[2][j][end]
-                    flows_agg = results[3][j][end]
+                    flows_hv = results[1][j]
+                    flows_av = results[2][j]
+                    flows_agg = results[3][j]
 
                     # Edge costs
                     edge_costs = travel_times(flows_agg, a, b)
 
-                    ###
                     ### Ensemble calculations
-                    ###
 
                     # Total costs (and normalisation)
+
                     tot_cost = edge_costs ⋅ flows_agg
-                    normed_tot_cost = (tot_cost - so_cost) / (ue_cost - so_cost)
 
-                    # Per-vehicle costs
-                    perv_costs_hv = (flows_hv ⋅ edge_costs) / (d*(1-γ))
-                    perv_costs_av = (flows_av ⋅ edge_costs) / (d*γ)
+                    if tot_cost < min_tot
+
+                        normed_tot_cost = (tot_cost - so_cost) / (ue_cost - so_cost)
+                        # Per-vehicle costs
+                        perv_costs_hv = (flows_hv ⋅ edge_costs) / (d*(1-γ))
+                        perv_costs_av = (flows_av ⋅ edge_costs) / (d*γ)
+
+                        min_tot = tot_cost
+                        min_norm = normed_tot_cost
+                        min_pvh = perv_costs_hv
+                        min_pva = perv_costs_av
+                    end
+                end
+
+                ### Update containers
+
+                # Total costs
+                update_sums_welford!(i,
+                                    view(r_mean_tot[l], k, j),
+                                    view(r_std_tot[l], k, j),
+                                    min_tot)
+
+                # Normalised costs
+                update_sums_welford!(i,
+                                    view(r_mean_normed_tot_costs[l], k, j),
+                                    view(r_std_normed_tot_costs[l], k, j),
+                                    min_norm)
+
+                # Per-vehicle costs
+                update_sums_welford!(i,
+                                    view(r_mean_perv_hv[l], k, j),
+                                    view(r_std_perv_hv[l], k, j),
+                                    min_pvh)
+
+                update_sums_welford!(i,
+                                    view(r_mean_perv_av[l], k, j),
+                                    view(r_std_perv_av[l], k,j),
+                                    min_pva)
 
 
-                    ### Update containers
-
-                    # Total costs
-                    update_sums_welford!(i,
-                                        view(r_mean_tot[l], k, j),
-                                        view(r_std_tot[l], k, j),
-                                        tot_cost)
-
-                    # Normalised costs
-                    update_sums_welford!(i,
-                                        view(r_mean_normed_tot_costs[l], k, j),
-                                        view(r_std_normed_tot_costs[l], k, j),
-                                        normed_tot_cost)
-
-                    # Per-vehicle costs
-                    update_sums_welford!(i,
-                                        view(r_mean_perv_hv[l], k, j),
-                                        view(r_std_perv_hv[l], k, j),
-                                        perv_costs_hv)
-
-                    update_sums_welford!(i,
-                                        view(r_mean_perv_av[l], k, j),
-                                        view(r_std_perv_av[l], k,j),
-                                        perv_costs_av)
+                #perv_cost_diff = perv_costs_hv - perv_costs_av
 
 
-                    #perv_cost_diff = perv_costs_hv - perv_costs_av
-
-
-                end  # γ loop
-            end  # d loop
-        end # path sample loop
+            end  # γ loop
+        end  # d loop
     end  # net loop
 
     ### Update std
