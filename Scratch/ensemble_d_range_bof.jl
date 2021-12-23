@@ -84,7 +84,7 @@ function main()
 
     ############################################
 
-    # Directories
+    ### Directories
 
     files_in_dir = readdir(ens_dir)
     network_files = filter(s -> split(s, '.')[end] == "mg", files_in_dir)
@@ -100,9 +100,7 @@ function main()
 
     #############################################
 
-
-
-
+    # Containers
 
     # Shorthand for readability
     ld = length(demand_range)
@@ -133,13 +131,10 @@ function main()
     #r_mean_percentage_links_hv = 0
     #r_std_percentage_links_hv = 0
 
-
-
-
     for (i,file) in enumerate(net_files)
 
         # Load net
-        net = loadgraph(file, MGFormat()) # Undirected
+        net = loadgraph(joinpath(ens_dir, file), MGFormat()) # Undirected
         rn = skel2rn(net) # Directed
         a = rn.edge_params[:a]
         b = rn.edge_params[:b]
@@ -201,7 +196,7 @@ function main()
 
                     ### Flows and edge costs
 
-                    results = red_results[sn]
+                    results = sample_results[sn]
 
                     # for each γⱼ (jth value of γ_array)
                     flows_hv = results[1][j]
@@ -235,30 +230,29 @@ function main()
 
                 # Total costs
                 update_sums_welford!(i,
-                                    view(r_mean_tot[l], k, j),
-                                    view(r_std_tot[l], k, j),
+                                    view(r_mean_tot, k, j),
+                                    view(r_std_tot, k, j),
                                     min_tot)
 
                 # Normalised costs
                 update_sums_welford!(i,
-                                    view(r_mean_normed_tot_costs[l], k, j),
-                                    view(r_std_normed_tot_costs[l], k, j),
+                                    view(r_mean_normed_tot_costs, k, j),
+                                    view(r_std_normed_tot_costs, k, j),
                                     min_norm)
 
                 # Per-vehicle costs
                 update_sums_welford!(i,
-                                    view(r_mean_perv_hv[l], k, j),
-                                    view(r_std_perv_hv[l], k, j),
+                                    view(r_mean_perv_hv, k, j),
+                                    view(r_std_perv_hv, k, j),
                                     min_pvh)
 
                 update_sums_welford!(i,
-                                    view(r_mean_perv_av[l], k, j),
-                                    view(r_std_perv_av[l], k,j),
+                                    view(r_mean_perv_av, k, j),
+                                    view(r_std_perv_av, k,j),
                                     min_pva)
 
 
                 #perv_cost_diff = perv_costs_hv - perv_costs_av
-
 
             end  # γ loop
         end  # d loop
