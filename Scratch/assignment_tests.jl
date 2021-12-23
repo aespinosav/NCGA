@@ -8,15 +8,15 @@ using TrafficNetworks2,
       SparseArrays,
       JuMP,
       Gurobi
-      
+
 ###
 ### Gurobi licence only once
-###      
-      
+###
+
 if !(@isdefined env)
     const env = Gurobi.Env()
 end
-      
+
 ###
 ### Incidence matrix correction (and other functions)
 ###
@@ -68,13 +68,13 @@ sorted_edges = collect(edges(rn.g))
 
 double_path = [1, 4, 2, 5]
 pe_3 = sorted_edges[double_path]
-oi_3 = [] 
+oi_3 = []
 oe_3 = []
 for (i, ed) in enumerate(sorted_edges)
     if !in(ed, pe_3)
         push!(oi_3, i)
         push!(oe_3, ed)
-    end   
+    end
 end
 
 
@@ -87,5 +87,5 @@ double_results = me_excluded_assignment_penalty(rn,
                                                 γ,
                                                 oi_3,
                                                 r_array)
-eq_flows = double_results[1][1]                                                
+eq_flows = double_results[1][1]
 ue_flows = multi_pair_stap_nc(rn, ods, demands; regime=:ue)
