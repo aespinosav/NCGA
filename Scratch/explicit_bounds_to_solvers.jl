@@ -84,7 +84,7 @@ for (i, ed) in enumerate(sorted_edges)
     if !in(ed, protected_edges)
         push!(other_indices, i)
         push!(other_edges, ed)
-    end     
+    end
 end
 
 # MST graph
@@ -121,7 +121,7 @@ function stap_wrapper(rn, ods; solver=:gurobi)
     n = nv(rn.g)
     m = ne(rn.g)
     A = my_incidence_matrix(rn.g)
-    
+
     a = rn.edge_params[:a]
     B = diagm(rn.edge_params[:b])
 
@@ -133,7 +133,7 @@ function stap_wrapper(rn, ods; solver=:gurobi)
         d_vec = spzeros(n)
         d_vec[s] = -demands[i]
         d_vec[d] = demands[i]
-        
+
         push!(d_vects_hv, (1-γ).*d_vec)
         push!(d_vects_av, γ.*d_vec)
     end
@@ -142,7 +142,7 @@ function stap_wrapper(rn, ods; solver=:gurobi)
     me_obj_func(x, y) = sum( B[i,i]*(x[i]+y[i])^2 + 
                              a[i]*x[i] + 
                              0.5*a[i]*y[i] for i in 1:length(x))
-                                 
+
     # Choose solver
     if solver == :gurobi
         stap = Model(() -> Gurobi.Optimizer(env))
@@ -150,7 +150,7 @@ function stap_wrapper(rn, ods; solver=:gurobi)
         stap = Model(Ipopt.Optimizer)
     end
 
-    # OD specific link flows HV         
+    # OD specific link flows HV
     @variable(stap, x[1:m,1:n_ods])
     @constraint(stap, x .>= 0)
 
@@ -162,22 +162,22 @@ function stap_wrapper(rn, ods; solver=:gurobi)
     @constraint(stap,
             conservation_hvs[i in 1:n_ods],
             A*x[:,i] .== d_vects_hv[i])
-            
+
     @constraint(stap,
                 conservation_avs[i in 1:n_ods],
                 A*y[:,i] .== d_vects_av[i])
-                
+
     #Bound constraints (HV flow set to 0 on some links)
     for i in bounded_indices
         for k in 1:n_ods
             @constraint(stap, x[i,k]==0)
         end
     end
-    
+
 
     # Unpenalised objective
     @objective(stap, Min, me_obj_func(x, y))
-    
+
     # Solve
     optimize!(stap)
     return value.(x)[:], value.(y)[:] 
