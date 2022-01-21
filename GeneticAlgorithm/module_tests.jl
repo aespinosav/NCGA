@@ -29,7 +29,7 @@ using NDGeneticAlgorithm,
 
     @testset "Tests for mutation!" begin
         a = Individual(5)
-                NDGeneticAlgorithm.mutate!(a, BitArray([1,0,0,0,0]))
+        NDGeneticAlgorithm.mutate!(a, BitArray([1,0,0,0,0]))
 
         @test a.genome == BitArray([1,0,0,0,0])
 
@@ -38,5 +38,9 @@ using NDGeneticAlgorithm,
 
         @test typeof(b) == Individual
         @test typeof(b.genome) == BitArray{1}
+    end
+
+    @testset "Tests for fitness" begin
+
     end
 end

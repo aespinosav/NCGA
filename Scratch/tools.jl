@@ -3,7 +3,8 @@
 ###
 
 using ArgParse,
-      JuMP
+      JuMP,
+      LinearAlgebra
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -314,6 +315,23 @@ function node_closest_to(mg, point)
     min_dist = Inf
     min_node = -1
     for i in 1:nv(mg)
+        dists[i] = norm(positions[i,:] - point)
+        if dists[i] <= min_dist
+           min_dist = dists[i]
+           min_node = i
+        end
+    end
+    return min_node
+end
+
+function node_closest_to(rn::RoadNetwork, point)
+    positions = rn.node_params[:pos]
+    num_nodes = nv(rn.g)
+    
+    dists = zeros(num_nodes)
+    min_dist = Inf
+    min_node = -1
+    for i in 1:num_nodes
         dists[i] = norm(positions[i,:] - point)
         if dists[i] <= min_dist
            min_dist = dists[i]
