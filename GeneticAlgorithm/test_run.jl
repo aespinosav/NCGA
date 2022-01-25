@@ -9,8 +9,9 @@ using TrafficNetworks2,
 
 p_mut = 0.05 # mutation probability
 n_pop = 50 # Individuals in population (at any generation)
-n_gen = 40 # Number of generations
+n_gen = 60 # Number of generations
 
+elite_prop = 0.15
 
 #######################################################
 ######################################################
@@ -56,16 +57,23 @@ d_range = LinRange(0.0001, 0.03, 10)
 ### GA setup
 ###
 
+# Genome-Net mapping
 genome_edge_dict = genome_edge_mapping(sorted_edges, mst_edges)
 genome_len = length(genome_edge_dict)
 
-### Starting population
-
+# Starting population
 pop = generate_population(genome_len, n_pop)
+
+# Seeding
+seed_ind_1 = Individual(BitArray(ones(genome_len)), -Inf)
+seed_ind_2 = Individual(BitArray(zeros(genome_len)), -Inf)
+pop[1] = seed_ind_1
+pop[2] = seed_ind_2
 
 # Calculate fitness and sort
 fitness!(pop, rn, genome_edge_dict, ods, d_range, γ_range)
 fitness_sort!(pop)
+
 
 ###
 ### Evolve population
@@ -77,24 +85,12 @@ for i in 1:n_gen
     # Offspring
     off_pop = evolve(gens[i], p_mut)
 
+    # Elitism
+    new_pop = elite_conservation(pop, off_pop, elite_prop)
+
+    # Fitness calculation
     fitness!(off_pop, rn, genome_edge_dict, ods, d_range, γ_range)
     fitness_sort!(off_pop)
-
-    # Elitism (keep top 10% of individuals from previous gen if fitter)
-    elite_pop = pop[1:round(Int, 0.1*n_pop)]
-
-    cutoff = 0
-    for (k, ind) in enumerate(elite_pop)
-        if ind.fitness > off_pop[1].fitness
-            cutoff = k
-        end
-    end
-
-    if cutoff > 0
-        new_pop = [elite_pop[1:cutoff]..., off_pop[cutoff:end]...]
-    else
-        new_pop = off_pop
-    end
 
     # New generation
     push!(gens, new_pop)

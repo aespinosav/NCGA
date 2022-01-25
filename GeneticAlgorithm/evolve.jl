@@ -1,5 +1,10 @@
 # Functions for evolving the population from generation to generation
 
+"""
+Select mating pairs from `pop` and produce generation of offspring.
+Includes mutation step with each allele having probability
+`p_mut` of flipping.
+"""
 function evolve(pop::Array{Individual,1}, p_mut)
 
     n_ind = length(pop)
@@ -24,3 +29,32 @@ function evolve(pop::Array{Individual,1}, p_mut)
     offspring_pop
 end
 
+"""
+Keep top `frac` prcent of parent population in the next generation
+as long as they are fitter than the fittest in offspring generation
+"""
+function elite_conservation(pop, off_pop, frac)
+
+    n_pop = length(pop)
+    ind_frac = round(Int, frac*n_pop)
+
+    # Possible elites
+    elite_pop = pop[1:ind_frac]
+
+    top_off = off_pop[1].fitness
+
+    cutoff = 0
+    for (k, ind) in enumerate(elite_pop)
+        if ind.fitness > top_off
+            cutoff = k
+        end
+    end
+
+    if cutoff > 0
+        new_pop = [elite_pop[1:cutoff]..., off_pop[1:end-cutoff]...]
+    else
+        new_pop = off_pop
+    end
+
+    new_pop
+end

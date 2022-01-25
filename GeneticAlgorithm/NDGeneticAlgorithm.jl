@@ -34,7 +34,8 @@ export # From chromo.jl
        # From selection.jl
        select_mating_array,
        # From evolve.jl
-       evolve
+       evolve,
+       elite_conservation
 
 # Module files
 

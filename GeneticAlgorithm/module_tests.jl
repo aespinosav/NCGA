@@ -43,4 +43,22 @@ using NDGeneticAlgorithm,
     @testset "Tests for fitness" begin
 
     end
+
+    @testset "Tests for elitism" begin
+        pop1 = [Individual(3) for i in 1:10]
+        pop2 = [Individual(3) for i in 1:10]
+
+        for i in 1:10
+            pop1[i].fitness = 20 + i
+            pop2[i].fitness = i
+        end
+
+        fitness_sort!(pop1)
+        fitness_sort!(pop2)
+
+        new_pop = elite_conservation(pop1, pop2, 0.1)
+
+        @test new_pop[1].fitness == 30
+        @test new_pop[2].fitness == 10
+    end
 end
