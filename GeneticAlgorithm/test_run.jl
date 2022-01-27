@@ -8,8 +8,8 @@ using TrafficNetworks2,
 ### GA params
 
 p_mut = 0.05 # mutation probability
-n_pop = 50 # Individuals in population (at any generation)
-n_gen = 60 # Number of generations
+n_pop = 20 # Individuals in population (at any generation)
+n_gen = 6 # Number of generations
 
 elite_prop = 0.15
 
@@ -62,13 +62,17 @@ genome_edge_dict = genome_edge_mapping(sorted_edges, mst_edges)
 genome_len = length(genome_edge_dict)
 
 # Starting population
-pop = generate_population(genome_len, n_pop)
+#pop = generate_population(genome_len, n_pop)
 
-# Seeding
-seed_ind_1 = Individual(BitArray(ones(genome_len)), -Inf)
-seed_ind_2 = Individual(BitArray(zeros(genome_len)), -Inf)
-pop[1] = seed_ind_1
-pop[2] = seed_ind_2
+pop = generate_diverse_pop(genome_len, n_pop)
+
+# Seeding (this is done automatically by using
+# generate_diverse_pop function)
+
+#seed_ind_1 = Individual(BitArray(ones(genome_len)), -Inf)
+#seed_ind_2 = Individual(BitArray(zeros(genome_len)), -Inf)
+#pop[1] = seed_ind_1
+#pop[2] = seed_ind_2
 
 # Calculate fitness and sort
 fitness!(pop, rn, genome_edge_dict, ods, d_range, γ_range)
@@ -83,7 +87,8 @@ gens = [pop]
 for i in 1:n_gen
 
     # Offspring
-    off_pop = evolve(gens[i], p_mut)
+    #off_pop = evolve(gens[i], p_mut)
+    off_pop = evolve(gens[i], p_mut, q=2) # tournament selection
 
     # Elitism
     new_pop = elite_conservation(pop, off_pop, elite_prop)
