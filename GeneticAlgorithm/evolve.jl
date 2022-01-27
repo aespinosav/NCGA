@@ -4,15 +4,27 @@
 Select mating pairs from `pop` and produce generation of offspring.
 Includes mutation step with each allele having probability
 `p_mut` of flipping.
+
+The `select_mating_array` method depends on the arguments
+used to call it.
+
+If `q`== `nothing` then fitness proportional selection is
+used, otherwise an `Int` should be passed that is the number
+of individuals per tournament for `tournament_selection`
 """
-function evolve(pop::Array{Individual,1}, p_mut)
+function evolve(pop::Array{Individual,1}, p_mut; q=nothing)
 
     n_ind = length(pop)
     n_mat_pairs = round(Int, n_ind/2)
 
-    ### Select mating pairs (fitness proportional selection)
-    ma1 = select_mating_array(pop, n_mat_pairs)
-    ma2 = select_mating_array(pop, n_mat_pairs)
+    if q==nothing
+        ### Select mating pairs (fitness proportional selection)
+        ma1 = select_mating_array(pop, n_mat_pairs)
+        ma2 = select_mating_array(pop, n_mat_pairs)
+    elseif typeof(q) <: Int
+        ma1 = select_mating_array(pop, n_mat_pairs, q)
+        ma2 = select_mating_array(pop, n_mat_pairs, q)
+    end
 
     # Reproduction
     offspring_pop = Individual[]
