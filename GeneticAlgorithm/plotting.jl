@@ -23,8 +23,8 @@ function plot_evolution(gens; stride=1)
     xl = (0,1)
     yl = (min_fit, max_fit)
 
-    fit_arrays = [map(x->x.fitness, gens[i]) for i in gen_range]
-    dens_arrays = [map(x->sum(x.genome)/g_len, gens[i]) for i in gen_range]
+    fit_arrays = [map(x->x.fitness, gens[i]) for i in 1:length(gens)]
+    dens_arrays = [map(x->sum(x.genome)/g_len, gens[i]) for i in 1:length(gens)]
 
     p = scatterplot(dens_arrays[1], fit_arrays[1], xlim=xl, ylim=yl, name="gen 1")
     for j in 1:stride:length(gens)
