@@ -16,6 +16,17 @@ end
 Individual(N::Int) = Individual(BitArray(undef, N), -Inf)
 Individual(G::BitArray) = Individual(G, -Inf)
 
+"""
+Generate individual with genome length `gen_len`
+and average density of `1`s in genome of `p`
+"""
+function Individual(gen_len::Int, p::Float64)
+    gen_dist = Binomial(1, p)
+    genome = BitArray(rand(gen_dist, gen_len))
+    Individual(genome)
+end
+
+
 function ==(a::Individual, b::Individual)
     a.genome == b.genome &&
     a.fitness == b.fitness
@@ -28,15 +39,33 @@ length(a::Individual) = length(a.genome)
 """
 Generate a random population of `m`  individuals with 
 length of genome: `genome_len`.
+
+ρ: Average density of `1` in genome
 """
-function generate_population(genome_len, m)
+function generate_population(genome_len, m; ρ=0.5)
     pop = Individual[]
     for i in 1:m
-        push!(pop, Individual(BitArray(rand([0,1], genome_len)), -Inf))
+        a = Individual(genome_len, ρ)
+        push!(pop, a)
     end
     pop
 end
 
+"""
+Generates population with "genetic" diversity
+by drawing genomes with different densities of `1`s
+scanning the densiity range `dens_range`
+"""
+function generate_diverse_pop(genome_len, pop_n; dens_min=0.0, dens_max=1.0)
+    densities = LinRange(dens_min, dens_max, pop_n)
+
+    pop = Individual[]
+    for d in densities
+        a = Individual(genome_len, d)
+        push!(pop, a)
+    end
+    pop
+end
 
 ### Function for mapping genome to non-mst edges
 
