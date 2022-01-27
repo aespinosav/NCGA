@@ -40,6 +40,19 @@ using NDGeneticAlgorithm,
         @test typeof(b.genome) == BitArray{1}
     end
 
+    @testset "Tests for selection" begin
+        # Fitness proportional selection
+
+        # Tournament selection (ordinal selection)
+        a = Individual(3)
+        a.fitness = 10
+        b = Individual(3)
+        b.fitness = 1
+        victor = tournament_selection([a, b], 2)
+
+        @test victor == a
+    end
+
     @testset "Tests for fitness" begin
 
     end
