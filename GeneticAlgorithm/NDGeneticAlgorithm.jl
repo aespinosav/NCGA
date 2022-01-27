@@ -2,7 +2,6 @@
 
 module NDGeneticAlgorithm
 
-
 using TrafficNetworks2,
       SkeletonCities2,
       LightGraphs,
@@ -13,18 +12,18 @@ using TrafficNetworks2,
       JuMP,
       Ipopt,
       StatsBase,
-      Distributions
-
+      Distributions,
+      UnicodePlots
 
 import Base.==,
        Base.length
-
 
 export # From chromo.jl
        Individual,
        length,
        genome_edge_mapping,
        generate_population,
+       generate_diverse_pop,
        # From gen_operations.jl
        crossover,
        mutation!,
@@ -35,7 +34,10 @@ export # From chromo.jl
        select_mating_array,
        # From evolve.jl
        evolve,
-       elite_conservation
+       elite_conservation,
+       # From plotting.jl
+       plot_fit_dens,
+       plot_evolution
 
 # Module files
 
