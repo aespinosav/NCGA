@@ -3,15 +3,21 @@ using TrafficNetworks2,
       LightGraphs,
       MetaGraphs,
       GraphIO,
+      Serialization,
+      Dates,
       NDGeneticAlgorithm
 
 ### GA params
 
 p_mut = 0.05 # mutation probability
-n_pop = 20 # Individuals in population (at any generation)
-n_gen = 6 # Number of generations
+n_pop = 50 # Individuals in population (at any generation)
+n_gen = 60 # Number of generations
 
 elite_prop = 0.15
+
+### Saving
+
+time_of_run = Dates.format(now(), dateformat"yyyy_mm_dd_HH_MM")
 
 #######################################################
 ######################################################
@@ -23,7 +29,6 @@ elite_prop = 0.15
 
 include("../Scratch/tools.jl")
 include("../Scratch/penalty.jl")
-
 
 ###
 ### Network
@@ -100,3 +105,7 @@ for i in 1:n_gen
     # New generation
     push!(gens, new_pop)
 end
+
+### Save population
+serialize("pop_savefile_$(time_of_run).jlsl", gens)
+# Use deserialize to open
