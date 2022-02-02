@@ -1,6 +1,6 @@
 using TrafficNetworks2,
       SkeletonCities2,
-      LightGraphs,
+      Graphs,
       MetaGraphs,
       GraphIO,
       Serialization,
