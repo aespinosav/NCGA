@@ -4,7 +4,7 @@ module NDGeneticAlgorithm
 
 using TrafficNetworks2,
       SkeletonCities2,
-      LightGraphs,
+      Graphs,
       GraphIO,
       MetaGraphs,
       LinearAlgebra,
