@@ -327,7 +327,7 @@ end
 function node_closest_to(rn::RoadNetwork, point)
     positions = rn.node_params[:pos]
     num_nodes = nv(rn.g)
-    
+
     dists = zeros(num_nodes)
     min_dist = Inf
     min_node = -1
