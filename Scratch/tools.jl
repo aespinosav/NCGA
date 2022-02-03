@@ -153,7 +153,7 @@ function multi_pair_stap_nc(rn, ods, demands; regime=:ue, solver=:gurobi)
     n_ods = length(ods)
 
     a = rn.edge_params[:a]
-    B = diagm(rn.edge_params[:b])  
+    B = diagm(rn.edge_params[:b])
 
     d_vects = SparseVector{Float64,Int64}[]
     for i in 1:length(ods)
@@ -174,11 +174,11 @@ function multi_pair_stap_nc(rn, ods, demands; regime=:ue, solver=:gurobi)
         end
     elseif solver == :ipopt
         stap = Model(Ipopt.Optimizer)
-        set_silent(stap)
+        #set_silent(stap)
     end
 
     #stap = Model(Gurobi.Optimizer)
-    #set_silent(stap)
+    set_silent(stap)
 
     # OD specific link flows
     @variable(stap, x[1:m,1:n_ods] >= 0)
