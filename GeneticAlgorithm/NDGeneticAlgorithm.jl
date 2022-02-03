@@ -47,5 +47,5 @@ include("gen_operations.jl")
 include("fitness.jl")
 include("selection.jl")
 include("evolve.jl")
-
+include("plotting.jl")
 end
