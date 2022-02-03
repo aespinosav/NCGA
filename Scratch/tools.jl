@@ -174,6 +174,7 @@ function multi_pair_stap_nc(rn, ods, demands; regime=:ue, solver=:gurobi)
         end
     elseif solver == :ipopt
         stap = Model(Ipopt.Optimizer)
+        set_silent(stap)
     end
 
     #stap = Model(Gurobi.Optimizer)
