@@ -37,7 +37,8 @@ export # From chromo.jl
        elite_conservation,
        # From plotting.jl
        plot_fit_dens,
-       plot_evolution
+       plot_evolution,
+       term_link_plot
 
 # Module files
 
