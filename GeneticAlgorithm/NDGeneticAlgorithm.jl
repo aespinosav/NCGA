@@ -32,9 +32,6 @@ export # From chromo.jl
        fitness!,
        fitness_sort!,
        stap_wrapper_fit,
-       travel_times,
-       total_cost,
-       partial_cost,
        # From selection.jl
        select_mating_array,
        # From evolve.jl
@@ -47,7 +44,10 @@ export # From chromo.jl
        # From stap_tools.jl
        multi_pair_stap_nc,
        node_closest_to,
-       find_mst
+       find_mst,
+       travel_times,
+       total_cost,
+       partial_cost
 
 # Module files
 

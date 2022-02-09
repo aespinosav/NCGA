@@ -14,6 +14,10 @@ using TrafficNetworks2,
 
 """
 Calculates fitness of individual.
+
+This fitness function does a very coarse integration of the total costs
+in (d, γ)-space for the given demand and penetration rate ranges.
+
 Very naive method, but we can see if it works.
 """
 function fitness!(a::Individual,
@@ -154,22 +158,4 @@ function stap_wrapper_fit(rn, ods, demands, γ, bounded_indices; solver=:ipopt)
     # Solve
     optimize!(stap)
     return value.(x)[:], value.(y)[:]
-end
-
-###
-### Cost functions (from NetworkControl/tools.jl), for affine cost functions
-###
-
-function travel_times(x, a, b)
-    a .+ x.*b
-end
-
-function total_cost(x, a, b)
-    tt = travel_times(x, a, b)
-    tt ⋅ x
-end
-
-function partial_cost(x, tot_flow, a, b)
-    tt = travel_times(tot_flow, a, b)
-    tt ⋅ x
 end

@@ -64,3 +64,21 @@ function find_mst(mg, sorted_edges)
 
     return index_array, edge_array
 end
+
+###
+### Functions for finding costs (for affine cost functions))
+###
+
+function travel_times(x, a, b)
+    a .+ x.*b
+end
+
+function total_cost(x, a, b)
+    tt = travel_times(x, a, b)
+    tt ⋅ x
+end
+
+function partial_cost(x, tot_flow, a, b)
+    tt = travel_times(tot_flow, a, b)
+    tt ⋅ x
+end
