@@ -120,6 +120,8 @@ function stap_wrapper_fit(rn, ods, demands, γ, bounded_indices; solver=:ipopt)
         stap = Model(Ipopt.Optimizer)
     end
 
+    set_silent(stap)
+
     # OD specific link flows HV
     @variable(stap, x[1:m,1:n_ods])
     @constraint(stap, x .>= 0)
