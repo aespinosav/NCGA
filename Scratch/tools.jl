@@ -144,6 +144,10 @@ import TrafficNetworks2.multi_pair_stap_nc
 """
 Generate and solve multi pair stap by making copies of
 the network (general expression of stap)
+
+rn: RoadNetwork object
+ods: Array of (O, D) tuples. i.e. [(O₁,D₁), ... , (Oₙ, Dₙ)]
+demands: Array of demands
 """
 function multi_pair_stap_nc(rn, ods, demands; regime=:ue, solver=:gurobi)
     C = (regime == :ue ? 0.5 : 1.0)

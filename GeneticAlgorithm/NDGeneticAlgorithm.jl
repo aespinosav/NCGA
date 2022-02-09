@@ -16,7 +16,8 @@ using TrafficNetworks2,
       UnicodePlots
 
 import Base.==,
-       Base.length
+       Base.length,
+       TrafficNetworks2.multi_pair_stap_nc
 
 export # From chromo.jl
        Individual,
@@ -30,6 +31,10 @@ export # From chromo.jl
        # From fitness.jl
        fitness!,
        fitness_sort!,
+       stap_wrapper_fit,
+       travel_times,
+       total_cost,
+       partial_cost,
        # From selection.jl
        select_mating_array,
        # From evolve.jl
@@ -38,7 +43,11 @@ export # From chromo.jl
        # From plotting.jl
        plot_fit_dens,
        plot_evolution,
-       term_link_plot
+       term_link_plot,
+       # From stap_tools.jl
+       multi_pair_stap_nc,
+       node_closest_to,
+       find_mst
 
 # Module files
 
@@ -48,4 +57,5 @@ include("fitness.jl")
 include("selection.jl")
 include("evolve.jl")
 include("plotting.jl")
+include("stap_tools.jl")
 end
