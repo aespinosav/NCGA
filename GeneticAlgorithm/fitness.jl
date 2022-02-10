@@ -12,6 +12,10 @@ using TrafficNetworks2,
       Ipopt
 =#
 
+###
+### Fitnesses for `d` and `γ` ranges
+###
+
 """
 Calculates fitness of individual.
 
@@ -24,8 +28,8 @@ function fitness!(a::Individual,
                  rn::RoadNetwork,
                  genome_link_dict,
                  ods,
-                 d_range,
-                 γ_range)
+                 d_range::AbstractVector,
+                 γ_range::AbstractVector)
 
     n_ods = length(ods)
 
@@ -65,13 +69,56 @@ function fitness!(pop::Array{Individual,1},
                   rn::RoadNetwork,
                   genome_link_dict,
                   ods,
-                  d_range,
-                  γ_range)
+                  d_range_or_float,
+                  γ_range_or_float)
 
     for ind in pop
-        fitness!(ind, rn, genome_link_dict, ods, d_range, γ_range)
+        fitness!(ind, rn, genome_link_dict, ods, d_range_or_float, γ_range_or_float)
     end
 end
+
+
+###
+### Fitnesses for single (d, γ) pair
+###
+
+"""
+Fitness function for sigle (d, γ) pair.
+
+Fitness is 1/average_costs
+"""
+function fitness!(a::Individual,
+                 rn::RoadNetwork,
+                 genome_link_dict::Dict{Int64,Int64},
+                 ods::Vector{Tuple{Int64, Int64}},
+                 d::Float64,
+                 γ::Float64)
+
+    true_alleles = findall(x->x==1, a.genome)
+    bound_links = [genome_link_dict[k] for k in true_alleles]
+
+    n_ods = length(ods)
+    od_demands = (d/n_ods) * ones(n_ods)
+
+    x, y = stap_wrapper_fit(rn,
+                            ods,
+                            od_demands,
+                            γ,
+                            bound_links)
+
+    agg = x + y
+
+    tc = total_cost(agg, rn.edge_params[:a], rn.edge_params[:b])
+    tc_av = tc / d
+
+    fitness = 1/tc_av
+    a.fitness = fitness
+end
+
+
+###
+### Other functions
+###
 
 
 """
