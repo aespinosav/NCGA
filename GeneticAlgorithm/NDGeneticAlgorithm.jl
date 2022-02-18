@@ -37,6 +37,7 @@ export # From chromo.jl
        # From evolve.jl
        evolve,
        elite_conservation,
+       introduce_diverse_individuals!,
        # From plotting.jl
        plot_fit_dens,
        plot_evolution,
