@@ -34,7 +34,7 @@ end
 
 length(a::Individual) = length(a.genome)
 
-# Population: for now to be treated as an array/set of individuals
+# Population: for now, just an array/set of individuals
 
 """
 Generate a random population of `m`  individuals with 
