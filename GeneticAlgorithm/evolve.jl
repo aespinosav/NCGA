@@ -44,6 +44,8 @@ end
 """
 Keep top `frac` prcent of parent population in the next generation
 as long as they are fitter than the fittest in offspring generation
+
+Assumes that pop is sorted by fitness.
 """
 function elite_conservation(pop, off_pop, frac)
 
@@ -69,4 +71,41 @@ function elite_conservation(pop, off_pop, frac)
     end
 
     new_pop
+end
+
+
+"""
+Introduce diverse individuals instead of the 
+lowest fitness current individual in the population.
+
+Assume population is already sorted by fitness.
+"""
+function introduce_diverse_individuals!(pop::Array{Individual,1},
+                                        replacement_ratio,
+                                        rn,
+                                        genome_link_dict,
+                                        ods,
+                                        d_range_or_float,
+                                        γ_range_or_float)
+
+    pop_size = length(pop)
+    genome_length = length(pop[1].genome)
+    num_new_inds = round(Int, pop_size*replacement_ratio)
+
+    densities = [sum(a.genome)/genome_length for a in pop]
+    maximum_density = maximum(densities)
+
+    new_inds = generate_diverse_pop(genome_length,
+                                    num_new_inds,
+                                    dens_min = maximum_density,
+                                    dens_max = 1.0)
+
+    fitness!(new_inds,
+             rn,
+             genome_link_dict,
+             ods,
+             d_range_or_float,
+             γ_range_or_float)
+
+    pop[end-(num_new_inds-1):end] = new_inds
 end
