@@ -10,7 +10,7 @@ function plot_fit_dens(pop)
     xl = (0,1)
     yl = (0, 1.15*maximum(fitss))
 
-    scatterplot(dens, fitss, xlim=xl, ylim=yl)
+    scatterplot(dens, fitss, xlim=xl, ylim=yl, xlabel="AV link density", ylabel="Fitness")
 end
 
 
@@ -26,7 +26,7 @@ function plot_evolution(gens; stride=1)
     fit_arrays = [map(x->x.fitness, gens[i]) for i in 1:length(gens)]
     dens_arrays = [map(x->sum(x.genome)/g_len, gens[i]) for i in 1:length(gens)]
 
-    p = scatterplot(dens_arrays[1], fit_arrays[1], xlim=xl, ylim=yl, name="gen 1")
+    p = scatterplot(dens_arrays[1], fit_arrays[1], xlim=xl, ylim=yl, name="gen 1", xlabel="AV link density", ylabel="Fitness")
     for j in 1:stride:length(gens)
         if j>1
             scatterplot!(p, dens_arrays[j], fit_arrays[j], name="gen $j")
