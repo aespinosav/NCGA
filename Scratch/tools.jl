@@ -346,6 +346,9 @@ function node_closest_to(rn::RoadNetwork, point)
     return min_node
 end
 
+
+#### This function is now included in the NDGeneticAlgorithm module
+#### The same version is now included from stap_tools.jl
 """
 Find MST of `mg` and return array of edges and indices
 
