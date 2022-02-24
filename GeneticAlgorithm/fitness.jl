@@ -128,6 +128,26 @@ Single OD for now...
 
 Naive function that calculates all simple paths (with threshold)
 between O and D to get distribution of AV costs
+
+Usage:
+-----
+    dispersion_fitness!(indi::Individual,
+                        rn::RoadNetwork,
+                        genome_link_dict::Dict{Int64,Int64},
+                        ods::Vector{Tuple{Int64, Int64}},
+                        d::Float64,
+                        γ::Float64;
+                        τ_av_flow::Float64=0.001,
+                        p_cutoff::Int64=30,
+                        τ_cost::Float64=0.15)
+
+    + τ_av_flow: threshold for considering link unused
+                (proportion of AV demand)
+
+    + p_cutoff: max length of simple paths to find
+
+    + τ_cost: proportion of marginal cost gap (max - min) to use as
+              threshold for selecting min marginal cost paths
 """
 function dispersion_fitness!(indi::Individual,
                              rn::RoadNetwork,
