@@ -31,38 +31,38 @@ function fitness!(a::Individual,
              d_range::AbstractVector,
              γ_range::AbstractVector)
 
-n_ods = length(ods)
+    n_ods = length(ods)
 
-ld = length(d_range)
-lg = length(γ_range)
-num_gridpoints = ld * lg
+    ld = length(d_range)
+    lg = length(γ_range)
+    num_gridpoints = ld * lg
 
-cost_array = zeros(ld, lg)
+    cost_array = zeros(ld, lg)
 
-for (i,q) in enumerate(d_range)
-    for (j,γ) in enumerate(γ_range)
+    for (i,q) in enumerate(d_range)
+        for (j,γ) in enumerate(γ_range)
 
-        demands = (q/n_ods) * ones(n_ods)
+            demands = (q/n_ods) * ones(n_ods)
 
-        true_alleles = findall(x->x==1, a.genome)
-        bound_links = [genome_link_dict[k] for k in true_alleles]
+            true_alleles = findall(x->x==1, a.genome)
+            bound_links = [genome_link_dict[k] for k in true_alleles]
 
-        x, y = stap_wrapper_fit(rn,
-                                ods,
-                                demands,
-                                γ,
-                                bound_links)
+            x, y = stap_wrapper_fit(rn,
+                                    ods,
+                                    demands,
+                                    γ,
+                                    bound_links)
 
-        agg = x + y
+            agg = x + y
 
-        tc = total_cost(agg, rn.edge_params[:a], rn.edge_params[:b])
-        tc_av = tc / q
+            tc = total_cost(agg, rn.edge_params[:a], rn.edge_params[:b])
+            tc_av = tc / q
 
-        cost_array[i,j] = tc_av
+            cost_array[i,j] = tc_av
+        end
     end
-end
-fit = 1 / (sum(cost_array) / num_gridpoints)
-a.fitness = fit
+    fit = 1 / (sum(cost_array) / num_gridpoints)
+    a.fitness = fit
 end
 
 function fitness!(pop::Array{Individual,1},
@@ -72,9 +72,9 @@ function fitness!(pop::Array{Individual,1},
               d_range_or_float,
               γ_range_or_float)
 
-for ind in pop
-    fitness!(ind, rn, genome_link_dict, ods, d_range_or_float, γ_range_or_float)
-end
+    for ind in pop
+        fitness!(ind, rn, genome_link_dict, ods, d_range_or_float, γ_range_or_float)
+    end
 end
 
 
@@ -94,25 +94,25 @@ function fitness!(a::Individual,
              d::Float64,
              γ::Float64)
 
-true_alleles = findall(x->x==1, a.genome)
-bound_links = [genome_link_dict[k] for k in true_alleles]
+    true_alleles = findall(x->x==1, a.genome)
+    bound_links = [genome_link_dict[k] for k in true_alleles]
 
-n_ods = length(ods)
-od_demands = (d/n_ods) * ones(n_ods)
+    n_ods = length(ods)
+    od_demands = (d/n_ods) * ones(n_ods)
 
-x, y = stap_wrapper_fit(rn,
-                        ods,
-                        od_demands,
-                        γ,
-                        bound_links)
+    x, y = stap_wrapper_fit(rn,
+                            ods,
+                            od_demands,
+                            γ,
+                            bound_links)
 
-agg = x + y
+    agg = x + y
 
-tc = total_cost(agg, rn.edge_params[:a], rn.edge_params[:b])
-tc_av = tc / d
+    tc = total_cost(agg, rn.edge_params[:a], rn.edge_params[:b])
+    tc_av = tc / d
 
-fitness = 1/tc_av
-a.fitness = fitness
+    fitness = 1/tc_av
+    a.fitness = fitness
 end
 
 
