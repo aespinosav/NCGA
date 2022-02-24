@@ -30,6 +30,7 @@ export # From chromo.jl
        mutation!,
        # From fitness.jl
        fitness!,
+       dispersion_fitness!,
        fitness_sort!,
        stap_wrapper_fit,
        # From selection.jl
