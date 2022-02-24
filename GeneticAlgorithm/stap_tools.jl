@@ -65,12 +65,33 @@ function find_mst(mg, sorted_edges)
     return index_array, edge_array
 end
 
+"""
+Function for finding indices of AV links in network that
+correspond to AV exclusive links from genome.
+
+Usage:
+------
+
+    a : Individual
+    genome_map: Genome -> Network dictionary
+"""
+function av_links(a::Individual, genome_map)
+    active_alleles = findall(x->x==1, a.genome)
+    av_links = [genome_map[i] for i in active_alleles]
+end
+
+
 ###
 ### Functions for finding costs (for affine cost functions))
 ###
 
 function travel_times(x, a, b)
-    a .+ x.*b
+    a .+ (x .* b)
+end
+
+function marginal_travel_times(x, a, b)
+    # lᵐ(x) = l(x) + x*l'(x)
+    a .+ 2*(x .+ b)
 end
 
 function total_cost(x, a, b)

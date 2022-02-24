@@ -46,7 +46,9 @@ export # From chromo.jl
        multi_pair_stap_nc,
        node_closest_to,
        find_mst,
+       av_links,
        travel_times,
+       marginal_travel_times,
        total_cost,
        partial_cost
 
