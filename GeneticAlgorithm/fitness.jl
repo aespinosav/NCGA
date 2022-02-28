@@ -280,6 +280,31 @@ function dispersion_fitness!(indi::Individual,
 end
 
 
+"""
+dispersion_fitness! applied to a population
+"""
+function dispersion_fitness!(pop::Array{Individual,1},
+                             rn::RoadNetwork,
+                             genome_link_dict,
+                             ods,
+                             d_range_or_float,
+                             γ_range_or_float;
+                             τ_av_flow::Float64=0.001,
+                             p_cutoff::Int64=30,
+                             τ_cost::Float64=0.15)
+    for ind in pop
+        dispersion_fitness!(ind,
+                            rn,
+                            genome_link_dict,
+                            ods,
+                            d_range_or_float,
+                            γ_range_or_float,
+                            τ_av_flow=τ_av_flow,
+                            p_cutoff=p_cutoff,
+                            τ_cost=τ_cost)
+    end
+end
+
 ###
 ### Other functions
 ###
