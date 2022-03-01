@@ -31,6 +31,7 @@ export # From chromo.jl
        # From fitness.jl
        fitness!,
        dispersion_fitness!,
+       dispersion_fitness_ksp!,
        fitness_sort!,
        stap_wrapper_fit,
        # From selection.jl

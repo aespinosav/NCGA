@@ -305,6 +305,188 @@ function dispersion_fitness!(pop::Array{Individual,1},
     end
 end
 
+
+
+
+### K-shortest paths version
+
+
+"""
+Fitness function for single (d, γ) value pair based on dispersion
+of AV costs.
+
+Single OD for now...
+
+Naive function that calculates all simple paths (with threshold)
+between O and D to get distribution of AV costs
+
+Usage:
+-----
+    dispersion_fitness!(indi::Individual,
+                        rn::RoadNetwork,
+                        genome_link_dict::Dict{Int64,Int64},
+                        ods::Vector{Tuple{Int64, Int64}},
+                        d::Float64,
+                        γ::Float64;
+                        τ_av_flow::Float64=0.001,
+                        p_cutoff::Int64=30,
+                        τ_cost::Float64=0.15)
+
+    + τ_av_flow: threshold for considering link unused
+                (proportion of AV demand)
+
+    + p_cutoff: max length of simple paths to find
+
+    + τ_cost: proportion of marginal cost gap (max - min) to use as
+              threshold for selecting min marginal cost paths
+"""
+function dispersion_fitness_ksp!(indi::Individual,
+                             rn::RoadNetwork,
+                             genome_link_dict::Dict{Int64,Int64},
+                             ods::Vector{Tuple{Int64, Int64}},
+                             d::Float64,
+                             γ::Float64;
+                             τ_av_flow::Float64=0.001,
+                             k::Int64=20,
+                             trimming::Bool=true)
+
+    ### Genome -> Network representation
+
+    edgelist = collect(edges(rn.g))
+    edgemap = Dict{Edge, Int}(e=>i for (i, e) in enumerate(edgelist))
+
+    a = rn.edge_params[:a]
+    b = rn.edge_params[:b]
+
+    bound_links = av_links(indi, genome_link_dict)
+
+    ### STAP
+
+    n_ods = length(ods)
+    od_demands = (d/n_ods) * ones(n_ods)
+
+    hv_flow, av_flow = stap_wrapper_fit(rn,
+                                        ods,
+                                        od_demands,
+                                        γ,
+                                        bound_links)
+    agg_flow = hv_flow  + av_flow
+    link_costs = travel_times(agg_flow, a, b)
+
+    marginal_link_costs = marginal_travel_times(agg_flow, a, b)
+
+    ### Sub-network selection
+
+    threshold_av_flow = τ_av_flow * d * γ
+
+    used_av_links = findall(x -> x>threshold_av_flow, av_flow)
+    av_elist = edgelist[used_av_links]
+    av_subgraph, av_vert_map = induced_subgraph(rn.g, av_elist)
+
+    # Remove links that are selected as AV links but
+    # carry no flow (forced mutation?), is this a good idea?
+    if trimming == true
+        remove_unused_av_links!(indi, genome_link_dict, av_flow; threshold=threshold_av_flow)
+    end
+
+    ### Path selection
+
+    # Single OD (ods[1])
+    av_O = findfirst(x->x==ods[1][1], av_vert_map)
+    av_D = findfirst(x->x==ods[1][2], av_vert_map)
+
+    av_paths = get_ksps(av_subgraph,
+                        av_vert_map,
+                        av_O,
+                        av_D,
+                        edgemap,
+                        marginal_link_costs,
+                        k)
+
+    ### Path costs
+
+    # Path costs and marginal costs
+    path_tts = Vector{Float64}(undef, length(av_paths))
+    path_mar_tts = Vector{Float64}(undef, length(av_paths))
+    for (i,p) in enumerate(av_paths)
+        path_flow = agg_flow[p]
+        path_a = a[p]
+        path_b = b[p]
+
+        path_cost = sum(travel_times(path_flow, path_a, path_b))
+        mar_path_cost = sum(marginal_travel_times(path_flow, path_a, path_b))
+
+        path_tts[i] = path_cost
+        path_mar_tts[i] = mar_path_cost
+    end
+
+    ### Determine path flows
+
+    Λ = edge_route_incidence_matrix_ei(rn, av_paths)
+
+    # Find pseudoinverse (LSE) solution and clip for >0 flows
+    ĥ = map(x -> x<0 ? 0.0  : x, Matrix(Λ) \ av_flow)
+    ĥ *= d*γ/sum(ĥ) # Consistent route flows with AV demand
+
+    # Get non-zero paths and flows
+    non_z_inds = findall(x -> x>1e-12, ĥ)
+    reduced_path_set = av_paths[non_z_inds]
+
+    ĥ_r = ĥ[non_z_inds]
+    Λ_r = Λ[:,non_z_inds]
+
+    ### Path costs at estimated flows
+
+    # Link flows under estimated path flows
+    f̂ = Λ_r * ĥ_r
+    new_agg_flow = f̂ + hv_flow
+    ĉ = travel_times(new_agg_flow, a, b)
+
+    # Path costs
+    path_costs = Vector{Float64}(undef, length(reduced_path_set))
+    for (i,p) in enumerate(reduced_path_set)
+        p_cost = sum(travel_times(new_agg_flow[p], a[p], b[p]))
+        path_costs[i] = p_cost
+    end
+
+    ### Dispersion measure (coefficient of variation)
+    μ = mean(path_costs, StatsBase.weights(ĥ_r))
+    σ = std(path_costs, StatsBase.weights(ĥ_r))
+
+    # Fitens: 1/CV
+
+    indi.fitness = μ/σ
+end
+
+
+function dispersion_fitness_ksp!(pop::Vector{Individual},
+                             rn::RoadNetwork,
+                             genome_link_dict::Dict{Int64,Int64},
+                             ods::Vector{Tuple{Int64, Int64}},
+                             d::Float64,
+                             γ::Float64;
+                             τ_av_flow::Float64=0.001,
+                             k::Int64=20,
+                             trimming::Bool=true)
+
+    for indi in pop
+        dispersion_fitness_ksp!(indi::Individual,
+                                rn::RoadNetwork,
+                                genome_link_dict::Dict{Int64,Int64},
+                                ods::Vector{Tuple{Int64, Int64}},
+                                d::Float64,
+                                γ::Float64;
+                                τ_av_flow=τ_av_flow,
+                                k=k,
+                                trimming=trimming)
+    end
+end
+
+
+
+
+
+
 ###
 ### Other functions
 ###
@@ -441,4 +623,61 @@ function edge_route_incidence_matrix_ei(rn, paths)
         Λ[p, i] .= 1
     end
     Λ
+end
+
+
+"""
+Get k-shortest paths (using Yen's algorithm with
+weights given by marginal_costs)
+"""
+function get_ksps(av_subgraph,
+                  av_vert_map,
+                  av_O,
+                  av_D,
+                  edgemap,
+                  marginal_link_costs,
+                  k)
+
+    A = Graphs.adjacency_matrix(av_subgraph)
+    I, J, V = findnz(A)
+    num_entries = length(I)
+
+    edge_marginal_tts = Vector{Float64}(undef, num_entries)
+    @inbounds for i in 1:num_entries
+        original_src = av_vert_map[I[i]]
+        original_dst = av_vert_map[J[i]]
+        ed_ind = edgemap[Edge(original_src, original_dst)]
+
+        edge_marginal_tts[i] = marginal_link_costs[ed_ind]
+    end
+
+    A = sparse(I, J, edge_marginal_tts)
+    yen_state = yen_k_shortest_paths(av_subgraph,
+                                     av_O,
+                                     av_D,
+                                     A,
+                                     k)
+
+    av_paths = Vector{Vector{Int64}}()
+    for p in yen_state.paths
+        Γ = edges_in_path(p, av_vert_map, edgemap)
+        push!(av_paths, Γ)
+    end
+
+    av_paths
+end
+
+
+"""
+Removes AV paths if flow is below threshold,
+the idea is to avoid surplus AV exclusive links
+"""
+function remove_unused_av_links!(indi, genome_map, av_flows; threshold=1e-6)
+    for i in 1:length(indi.genome)
+        if indi.genome[i] == 1
+            if av_flows[genome_map[i]] < threshold
+                indi.genome[i] = 0
+            end
+        end
+    end
 end
