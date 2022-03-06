@@ -75,7 +75,7 @@ end
 
 
 """
-Introduce diverse individuals instead of the 
+Introduce diverse individuals instead of the
 lowest fitness current individual in the population.
 
 Assume population is already sorted by fitness.
@@ -106,6 +106,49 @@ function introduce_diverse_individuals!(pop::Array{Individual,1},
              ods,
              d_range_or_float,
              γ_range_or_float)
+
+    pop[end-(num_new_inds-1):end] = new_inds
+end
+
+
+"""
+Introduce diverse individuals instead of the
+lowest fitness current individual in the population.
+
+Assume population is already sorted by fitness.
+
+Calculate fitness with dispersion_fitness_ksp! function.
+"""
+function introduce_diverse_individuals!(pop::Array{Individual,1},
+                                        replacement_ratio,
+                                        rn,
+                                        genome_link_dict,
+                                        ods,
+                                        d_range_or_float,
+                                        γ_range_or_float,
+                                        k::Int;
+                                        trimming::Bool=false)
+
+    pop_size = length(pop)
+    genome_length = length(pop[1].genome)
+    num_new_inds = round(Int, pop_size*replacement_ratio)
+
+    densities = [sum(a.genome)/genome_length for a in pop]
+    maximum_density = maximum(densities)
+
+    new_inds = generate_diverse_pop(genome_length,
+                                    num_new_inds,
+                                    dens_min = maximum_density,
+                                    dens_max = 1.0)
+
+    dispersion_fitness_ksp!(new_inds,
+                            rn,
+                            genome_link_dict,
+                            ods,
+                            d_range_or_float,
+                            γ_range_or_float,
+                            k=k,
+                            trimming=trimming)
 
     pop[end-(num_new_inds-1):end] = new_inds
 end
