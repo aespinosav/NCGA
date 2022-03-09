@@ -64,12 +64,12 @@ end
 
 # Requires import from Base in module file
 
-function ==(a::AbstractIndividual, b::AbstractIndividual)
+function ==(a::T, b::T) where {T<:AbstractIndividual}
     a.genome == b.genome &&
     a.fitness == b.fitness
 end
 
-length(a::AbstractIndividual) = length(a.genome)
+length(a::T) where {T<:AbstractIndividual} = length(a.genome)
 
 
 """
@@ -91,6 +91,35 @@ end
 ###
 ### Other functions
 ###
+
+### Function for mapping genome to non-mst edges
+
+"""
+Returns a dictionary that maps edges in the genome of individuals
+to edges on the network that can be selected as AV exclusive netwroks
+(i.e. edges not in the mst)
+
+The dictionary uses the indices of the edges, but takes
+in arrays of Edge objects
+
+Usage
+----
+    genome_edge_mapping(sorted_edges, mst_edges)
+"""
+function genome_edge_mapping(sorted_edges, mst_edges)
+    num_edges = length(sorted_edges)
+    genome_edge_dict = Dict{Int,Int}()
+
+    k = 1
+    for i in 1:num_edges
+        if sorted_edges[i] ∉  mst_edges
+            genome_edge_dict[k] =  i
+            k += 1
+        end
+    end
+    genome_edge_dict
+end
+
 
 """
 Generates population with "genetic" diversity
@@ -132,18 +161,5 @@ function generate_diverse_pop(genome_len, pop_n; dens_min=0.0, dens_max=1.0)
 end
 =#
 
-### Function for mapping genome to non-mst edges
 
-function genome_edge_mapping(sorted_edges, mst_edges)
-    num_edges = length(sorted_edges)
-    genome_edge_dict = Dict{Int,Int}()
 
-    k = 1
-    for i in 1:num_edges
-        if sorted_edges[i] ∉  mst_edges
-            genome_edge_dict[k] =  i
-            k += 1
-        end
-    end
-    genome_edge_dict
-end

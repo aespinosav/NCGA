@@ -22,7 +22,7 @@ import Base.==,
 export # From chromo.jl
        AbstractIndividual,
        Individual,
-       Individual_KSP
+       Individual_KSP,
        length,
        genome_edge_mapping,
        generate_population,
