@@ -275,7 +275,6 @@ function dispersion_fitness!(indi::Individual,
     σ = std(path_costs, StatsBase.weights(ĥ_r))
 
     # Fitenss inverse of coefficient of variation
-
     indi.fitness = μ/σ
 end
 
@@ -340,7 +339,7 @@ Usage:
     + τ_cost: proportion of marginal cost gap (max - min) to use as
               threshold for selecting min marginal cost paths
 """
-function dispersion_fitness_ksp!(indi::Individual,
+function dispersion_fitness_ksp!(indi::Individual_KSP,
                              rn::RoadNetwork,
                              genome_link_dict::Dict{Int64,Int64},
                              ods::Vector{Tuple{Int64, Int64}},
@@ -453,13 +452,19 @@ function dispersion_fitness_ksp!(indi::Individual,
     μ = mean(path_costs, StatsBase.weights(ĥ_r))
     σ = std(path_costs, StatsBase.weights(ĥ_r))
 
-    # Fitens: 1/CV
+    # Fitness: 1/CV
 
     indi.fitness = μ/σ
+
+    # Add distribution details
+    indi.mean_path_cost = μ
+    indi.min_path_cost = minimum(path_costs)
+    indi.max_path_cost = maximum(path_costs)
+    indi.num_k_paths = length(path_costs)
 end
 
 
-function dispersion_fitness_ksp!(pop::Vector{Individual},
+function dispersion_fitness_ksp!(pop::Vector{Individual_KSP},
                              rn::RoadNetwork,
                              genome_link_dict::Dict{Int64,Int64},
                              ods::Vector{Tuple{Int64, Int64}},
@@ -470,21 +475,38 @@ function dispersion_fitness_ksp!(pop::Vector{Individual},
                              trimming::Bool=true)
 
     for indi in pop
-        dispersion_fitness_ksp!(indi::Individual,
-                                rn::RoadNetwork,
-                                genome_link_dict::Dict{Int64,Int64},
-                                ods::Vector{Tuple{Int64, Int64}},
-                                d::Float64,
-                                γ::Float64;
+        dispersion_fitness_ksp!(indi,
+                                rn,
+                                genome_link_dict,
+                                ods,
+                                d,
+                                γ,
                                 τ_av_flow=τ_av_flow,
                                 k=k,
                                 trimming=trimming)
     end
 end
 
+function dispersion_fitness!(pop::Vector{Individual_KSP},
+                            rn::RoadNetwork,
+                            genome_link_dict::Dict{Int64,Int64},
+                            ods::Vector{Tuple{Int64, Int64}},
+                            d::Float64,
+                            γ::Float64;
+                            τ_av_flow::Float64=0.001,
+                            k::Int64=20,
+                            trimming::Bool=true)
 
-
-
+    dispersion_fitness_ksp!(pop,
+                            rn,
+                            genome_link_dict,
+                            ods,
+                            d,
+                            γ,
+                            τ_av_flow=τ_av_flow,
+                            k=k,
+                            trimming=trimming)
+end
 
 
 ###
@@ -496,7 +518,7 @@ end
 Sorts a population based on fitness ranking.
 Descending order
 """
-function fitness_sort!(pop::Array{Individual,1})
+function fitness_sort!(pop::Array{T,1}) where T <: AbstractIndividual
     sort!(pop, by= p -> p.fitness, rev=true)
 end
 
