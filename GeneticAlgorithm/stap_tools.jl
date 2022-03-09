@@ -75,7 +75,7 @@ Usage:
     a : Individual
     genome_map: Genome -> Network dictionary
 """
-function av_links(a::Individual, genome_map)
+function av_links(a::T, genome_map) where {T<:AbstractIndividual}
     active_alleles = findall(x->x==1, a.genome)
     av_links = [genome_map[i] for i in active_alleles]
 end
