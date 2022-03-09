@@ -9,7 +9,7 @@ using Distributions
 Carries out single-point crossover.
 If crossover point is provided, do deterministically.
 """
-function crossover(a::Individual, b::Individual; x_point=nothing)
+function crossover(a::T, b::T; x_point=nothing) where {T<: AbstractIndividual}
 
     A = a.genome
     B = b.genome
@@ -29,7 +29,7 @@ function crossover(a::Individual, b::Individual; x_point=nothing)
     ng2[1:x_point] = B[1:x_point]
     ng2[x_point:end] = A[x_point:end]
 
-    return Individual(ng1), Individual(ng2)
+    return T(ng1), T(ng2)
 end
 
 """
@@ -44,7 +44,7 @@ end
 """
 Mutate genome according to `mutation vector`
 """
-function mutate!(a::Individual, mutation_vect::BitArray)
+function mutate!(a::T, mutation_vect::BitArray) where {T<:AbstractIndividual}
     N = length(a.genome)
     for i in 1:N
         if mutation_vect[i] == 1
@@ -61,7 +61,7 @@ according to probability `p`.
 Calls mutate! after generating the mutation vector
 and passing it as an argument.
 """
-function mutation!(a::Individual, p)
+function mutation!(a::T, p) where {T<:AbstractIndividual}
     N = length(a.genome)
     mv = draw_bernoulli_vec(N, p)
     mutate!(a, mv)
