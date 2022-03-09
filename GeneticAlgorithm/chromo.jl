@@ -1,7 +1,13 @@
 ### Type for Individuals in the population for GA
 
 
-# Individuals (maybe individuals should be immutable...)
+"""
+Abstract type for individuals of paopulations used
+for the genetic algorithm
+"""
+abstract type AbstractIndividual end
+
+### Concrete individual types
 
 """
 Individual in the genome population.
@@ -9,7 +15,7 @@ Individual in the genome population.
 `genome`: Array of binary variables (AV exclusive links)
 `fitness`: Total system cost (upper level objective)
 """
-mutable struct Individual
+mutable struct Individual <: AbstractIndividual
     genome::BitArray
     fitness::Float64
 end
@@ -26,15 +32,45 @@ function Individual(gen_len::Int, p::Float64)
     Individual(genome)
 end
 
+# Specialised Individual for KSP (has fields for more details on fitness)
 
-function ==(a::Individual, b::Individual)
+"""
+A more specialized class of Individual that can store details
+about the paths used to caluclate the fitness via the
+`dispersion_fitness_ksp"` function.
+"""
+mutable struct Individual_KSP <: AbstractIndividual
+    genome::BitArray
+    fitness::Float64
+    # For use storing relevant things during fitness calcs
+    mean_path_cost::Float64
+    min_path_cost::Float64
+    max_path_cost::Float64
+    num_k_paths::Int
+end
+Individual_KSP(N::Int) = Individual_KSP(BitArray(undef, N), -Inf, -Inf, -Inf, -Inf, -1)
+Individual_KSP(G::BitArray) = Individual_KSP(G, -Inf, -Inf, -Inf, -Inf, -1)
+
+function Individual_KSP(gen_len::Int, p::Float64)
+    gen_dist = Binomial(1, p)
+    genome = BitArray(rand(gen_dist, gen_len))
+    Individual_KSP(genome)
+end
+
+
+###
+### Methods (interface) for AbstractIndividual
+###
+
+# Requires import from Base in module file
+
+function ==(a::AbstractIndividual, b::AbstractIndividual)
     a.genome == b.genome &&
     a.fitness == b.fitness
 end
 
-length(a::Individual) = length(a.genome)
+length(a::AbstractIndividual) = length(a.genome)
 
-# Population: for now, just an array/set of individuals
 
 """
 Generate a random population of `m`  individuals with 
@@ -51,6 +87,34 @@ function generate_population(genome_len, m; ρ=0.5)
     pop
 end
 
+
+###
+### Other functions
+###
+
+"""
+Generates population with "genetic" diversity
+by drawing genomes with different densities of `1`s
+scanning the densiity range `dens_range`
+
+I have comandeered it to generate a population of
+Individual_KSP
+
+The function should probably take a type as argument
+and return population of that type...
+"""
+function generate_diverse_pop(genome_len, pop_n; dens_min=0.0, dens_max=1.0)
+    densities = LinRange(dens_min, dens_max, pop_n)
+
+    pop = Individual_KSP[]
+    for d in densities
+        a = eltype(pop)(genome_len, d)
+        push!(pop, a)
+    end
+    pop
+end
+
+#=
 """
 Generates population with "genetic" diversity
 by drawing genomes with different densities of `1`s
@@ -66,6 +130,7 @@ function generate_diverse_pop(genome_len, pop_n; dens_min=0.0, dens_max=1.0)
     end
     pop
 end
+=#
 
 ### Function for mapping genome to non-mst edges
 

@@ -20,7 +20,9 @@ import Base.==,
        TrafficNetworks2.multi_pair_stap_nc
 
 export # From chromo.jl
+       AbstractIndividual,
        Individual,
+       Individual_KSP
        length,
        genome_edge_mapping,
        generate_population,
