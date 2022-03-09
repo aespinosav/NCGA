@@ -12,7 +12,7 @@ If `q`== `nothing` then fitness proportional selection is
 used, otherwise an `Int` should be passed that is the number
 of individuals per tournament for `tournament_selection`
 """
-function evolve(pop::Array{Individual,1}, p_mut; q=nothing)
+function evolve(pop::Vector{T}, p_mut; q=nothing) where {T<:AbstractIndividual}
 
     n_ind = length(pop)
     n_mat_pairs = round(Int, n_ind/2)
@@ -27,7 +27,7 @@ function evolve(pop::Array{Individual,1}, p_mut; q=nothing)
     end
 
     # Reproduction
-    offspring_pop = Individual[]
+    offspring_pop = T[]
     for k in 1:length(ma1)
         a, b = crossover(ma1[k], ma2[k])
         append!(offspring_pop, [a, b])
@@ -119,7 +119,7 @@ Assume population is already sorted by fitness.
 
 Calculate fitness with dispersion_fitness_ksp! function.
 """
-function introduce_diverse_individuals!(pop::Array{Individual,1},
+function introduce_diverse_individuals!(pop::Array{T,1},
                                         replacement_ratio,
                                         rn,
                                         genome_link_dict,
@@ -127,7 +127,7 @@ function introduce_diverse_individuals!(pop::Array{Individual,1},
                                         d_range_or_float,
                                         γ_range_or_float,
                                         k::Int;
-                                        trimming::Bool=false)
+                                        trimming::Bool=false) where T <: AbstractIndividual
 
     pop_size = length(pop)
     genome_length = length(pop[1].genome)
