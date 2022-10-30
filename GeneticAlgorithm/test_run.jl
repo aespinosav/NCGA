@@ -10,8 +10,8 @@ using TrafficNetworks2,
 ### GA params
 
 p_mut = 0.05 # mutation probability
-n_pop = 50 # Individuals in population (at any generation)
-n_gen = 60 # Number of generations
+n_pop = 10 # Individuals in population (at any generation)
+n_gen = 5 # Number of generations
 
 elite_prop = 0.15
 
