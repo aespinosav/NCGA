@@ -41,7 +41,7 @@ for AV exclusive use.
 
 Based on `term_plot` in TrafficNetworks2
 """
-function term_link_plot(rn::RoadNetwork, a::Individual, map_dict::Dict{Int64,Int64})
+function term_link_plot(rn::RoadNetwork, a::T, map_dict::Dict{Int64,Int64}) where {T<:AbstractIndividual}
     node_positions = rn.node_params[:pos]
     edge_num = ne(rn.g)
 

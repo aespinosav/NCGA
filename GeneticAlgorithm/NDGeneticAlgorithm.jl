@@ -13,6 +13,7 @@ using TrafficNetworks2,
       Ipopt,
       StatsBase,
       Distributions,
+      HypothesisTests,
       UnicodePlots
 
 import Base.==,
@@ -54,7 +55,9 @@ export # From chromo.jl
        travel_times,
        marginal_travel_times,
        total_cost,
-       partial_cost
+       partial_cost,
+       # From stat_test.jl
+       test_same_means
 
 # Module files
 
@@ -65,4 +68,5 @@ include("selection.jl")
 include("evolve.jl")
 include("plotting.jl")
 include("stap_tools.jl")
+include("stat_test.jl")
 end
